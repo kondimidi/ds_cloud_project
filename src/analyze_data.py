@@ -1,5 +1,6 @@
 import awswrangler as wr
 import pandas as pd
+from visualize_data import create_visualizations
 
 # Configuration
 DATABASE = "default"
@@ -21,6 +22,10 @@ def get_data_from_athena():
     )
     return df
 
+def run_analysis():
+    df = get_data_from_athena()
+    create_visualizations(df)
+
 if __name__ == "__main__":
     # 1. Downloading data
     df = get_data_from_athena()
@@ -40,3 +45,6 @@ if __name__ == "__main__":
     print("--- TOP 5 OVERPRICED MAKE (Avg Difference) ---")
     avg_diff_by_make = df.groupby('make')['price_diff'].mean().sort_values(ascending=False)
     print(avg_diff_by_make.head())
+
+    # 3. Data visualization
+    create_visualizations(df)
