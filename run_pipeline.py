@@ -1,6 +1,7 @@
 import os
 from src.download_data import download_dataset
 from src.upload_to_s3 import upload_to_s3
+from src.analyze_data import run_analysis
 
 def run_everything():
     # 1. Confugiration
@@ -22,6 +23,9 @@ def run_everything():
             print("\nPIPELINE COMPLETED SUCCESSFULLY!")
     else:
         print(f"Error: File {LOCAL_FILE_PATH} not found. Check the file name in data/ folder.")
+
+    print("\n--- STEP 3: ANALYZING AND VISUALIZING ---")
+    run_analysis()
 
 if __name__ == "__main__":
     run_everything()
