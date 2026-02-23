@@ -1,6 +1,7 @@
 import os
 import json
 import boto3
+from datetime import datetime
 
 # 1. It has to be here BEFORE anything else happens
 os.environ['KAGGLE_CONFIG_DIR'] = "/tmp"
@@ -11,7 +12,8 @@ def lambda_handler(event, context):
     BUCKET_NAME = 'konrad-ds-project-data'
     DATASET_NAME = 'syedanwarafridi/vehicle-sales-data'
     TEMP_FILE = '/tmp/car_prices.csv'
-    S3_KEY = 'raw_data/car_prices.csv'
+    current_date = datetime.now().strftime('%Y-%m-%d')
+    S3_KEY = f'raw_data/{current_date}/car_prices.csv'
 
     # Kaggle supports these environmental variables directly:
     os.environ['KAGGLE_USERNAME'] = os.environ.get('KAGGLE_USERNAME')
@@ -52,7 +54,4 @@ def lambda_handler(event, context):
 
     except Exception as e:
         print(f"Error: {str(e)}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps(f"Pipeline failed: {str(e)}")
-        }
+        raise e

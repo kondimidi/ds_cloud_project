@@ -29,3 +29,20 @@ TBLPROPERTIES (
   'has_encrypted_data'='false', 
   'skip.header.line.count'='1',
   'use.null.for.invalid.data' = 'true');
+
+CREATE OR REPLACE VIEW v_vehicle_sales_clean AS
+SELECT
+    TRY_CAST(year as INT) as release_year,
+    make,
+    model,
+    car_trim,
+    body,
+    transmission,
+    state,
+    TRY_CAST(NULLIF(condition, '') AS INT) as condition_score,
+    TRY_CAST(NULLIF(odometer, '') AS DOUBLE) as mileage,
+    color,
+    TRY_CAST(NULLIF(mmr, '') AS DECIMAL(12,2)) as market_value,
+    TRY_CAST(NULLIF(sellingprice, '') AS DECIMAL(12,2)) as sale_price,
+    saledate
+FROM vehicle_sales;

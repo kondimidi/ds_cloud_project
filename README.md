@@ -1,20 +1,33 @@
 # Vehicle Sales Analysis Pipeline (AWS + Python)
 
 ## Project Overview
-Automated data pipeline that fetches vehilce sales data, store it in the cloud, and performs SQL-based analysis.
+Automated data pipeline that fetches vehicle sales data, store it in the cloud, and performs SQL-based analysis.
 
 ## Tech Stack
 - **Python**: Core logic and analysis (Pandas, Boto3 AWS Wrangler).
-- **AWS S3**: Raw data storage.
-- **AWS Athena**: Serverless SQL engine for querying data.
+- **AWS S3**: Scalable storage for Raw (CSV) and Refined (Parquet) Data Zones.
+- **AWS Athena**: Serverless SQL engine for high-performance querying.
+- **AWS Lambda**: Serverless compute for automated data ingestion and transformation.
+- **Amazon EventBridge**: Pipeline scheduling via CRON rules.
+- **AWS SNS**: Monitoring and email alerts for pipeline failures.
 - **Git**: Version control with feature-branching workflow.
-- **Kaggle API**: Data source.
+- **Kaggle API**: Source for vehicle sales datasets.
 
-## Data Pipeline
-1. `download_data.py`: Fetches data from Kaggle.
-2. `upload_to_s3.py`: Transfer CSV to AWS S3 bucket.
-3. **AWS Athena**: SQL Views clean and cast data types.
-4. `analyze_data.py`: Connects Python to Athena and generates insights.
+### Phase 1: Local Prototype & SQL Setup
+This initial phase focused on building the core logic and defining the database schema:
+1. `src/download_data.py`: Fetches raw data from Kaggle to local storage.
+2. `src/upload_to_s3.py`: Transfers CSV files to the AWS S3 `raw_data/` zone.
+3. `sql/create_table_vehicle_sales.sql`: Defines the initial schema for raw CSV data.
+4. `src/analyze_data.py`: Connects Python to Athena to generate business insights.
+5. `run_pipeline.py`: Orchestrates the local execution of the entire flow.
+
+### Phase 2: Cloud Automation (Event-Driven Architecture)
+The project was scaled to AWS to ensure data freshness and cost optimization:
+1. **Ingestion (`src/lambda_function.py`)**: Triggered by **EventBridge**. It fetches data and saves it in the **Raw Zone** using **Incremental Loading** (timestamped folders).
+2. **Transformation (`src/lambda_function_parquet.py`)**: Triggered by **S3 Event Notifications**. It cleans the data and converts it to **Apache Parquet**.
+3. **Partitioning**: Data is saved in the **Refined Zone** (`refined_data/`) partitioned by `year` and `month` for query speed and cost reduction.
+4. `sql/create_table_vehicle_sales_parquet.sql`: SQL DDL for the optimized Parquet-based partitioned table.
+5. **Monitoring**: **AWS SNS** sends instant email alerts if any stage fails.
 
 ## Key Insights
 ![Top Makes Chart](reports/top_makes_prices.png)
@@ -24,4 +37,5 @@ Automated data pipeline that fetches vehilce sales data, store it in the cloud, 
 1. Clone the repo.
 2. Set up AWS credentials in your environment.
 3. Run `pip install -r requirements.txt`.
-4. Execute `python run_pipeline.py`.
+4. **Local execution**: Run `python run_pipeline.py`.
+5. **Cloud deployment**: Zip files and Layers are provided to deploy as AWS Lambda functions.
