@@ -23,11 +23,18 @@ This initial phase focused on building the core logic and defining the database 
 
 ### Phase 2: Cloud Automation (Event-Driven Architecture)
 The project was scaled to AWS to ensure data freshness and cost optimization:
-1. **Ingestion (`src/lambda_function.py`)**: Triggered by **EventBridge**. It fetches data and saves it in the **Raw Zone** using **Incremental Loading** (timestamped folders).
-2. **Transformation (`src/lambda_function_parquet.py`)**: Triggered by **S3 Event Notifications**. It cleans the data and converts it to **Apache Parquet**.
+1. **Ingestion (`src/lambda_function.py`)**: Triggered by **EventBridge (CRON)**. It fetches data and saves it in the **Raw Zone** using **Incremental Loading** (timestamped folders). Set the Timeout to 1 minute. Used layer: AWSSDKPandas-Python312.
+2. **Transformation (`src/lambda_function_parquet.py`)**: Triggered by **S3 Event Notifications (Prefix: raw_data/)**. It cleans the data and converts it to **Apache Parquet**. Set the Timeout to 2 minutes and the **Memory** to 1024 MB. Used layers: AWSSDKPandas-Python312 and kaggle-library (setting below).
+	```mkdir -p kaggle_layer/python
+	cd kaggle_layer/python
+	pip install kaggle -t .
+	cd ..
+	zip -r kaggle_layer.zip python
+	aws lambda publish-layer-version --layer-name kaggle-library --zip-file fileb://kaggle_layer.zip --compatible-runtimes python3.12```
 3. **Partitioning**: Data is saved in the **Refined Zone** (`refined_data/`) partitioned by `year` and `month` for query speed and cost reduction.
 4. `sql/create_table_vehicle_sales_parquet.sql`: SQL DDL for the optimized Parquet-based partitioned table.
 5. **Monitoring**: **AWS SNS** sends instant email alerts if any stage fails.
+6. **Permissions**: Ensure the Lambda execution role has AmazonS3FullAccess, AmazonAthenaFullAccess, and AWSGlueConsoleFullAccess policies attached.
 
 ## Key Insights
 ![Top Makes Chart](reports/top_makes_prices.png)
@@ -36,6 +43,7 @@ The project was scaled to AWS to ensure data freshness and cost optimization:
 ## How to run
 1. Clone the repo.
 2. Set up AWS credentials in your environment.
-3. Run `pip install -r requirements.txt`.
-4. **Local execution**: Run `python run_pipeline.py`.
-5. **Cloud deployment**: Zip files and Layers are provided to deploy as AWS Lambda functions.
+3. Set up Kaggle credentials (KAGGLE_USERNAME and KAGGLE_KEY). Obtain these from Kaggle Account settings -> Create New API Token.
+4. Run `pip install -r requirements.txt`.
+5. **Local execution**: Run `python run_pipeline.py`.
+6. **Cloud deployment**: Zip files and Layers are provided to deploy as AWS Lambda functions.
