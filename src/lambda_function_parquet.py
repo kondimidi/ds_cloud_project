@@ -1,5 +1,6 @@
 import os
 import json
+import boto3
 from datetime import datetime
 import awswrangler as wr
 import pandas as pd
@@ -7,7 +8,7 @@ import pandas as pd
 
 def lambda_handler(event, context):
     # PARAMETERS
-    BUCKET_NAME = 'konrad-ds-project-data'
+    BUCKET_NAME = os.environ.get('BUCKET_NAME')
     current_date = datetime.now().strftime('%Y-%m-%d')
 
     # Where we read from (file uploaded by the first Lambda)
@@ -44,4 +45,11 @@ def lambda_handler(event, context):
 
     except Exception as e:
         print(f"Error: {str(e)}")
+        # Sending manually note to SNS
+        sns = boto3.client('sns')
+        sns.publish(
+            TopicArn=os.environ.get('SNS_TOPIC_ARN'),
+            Message=f"Lambda failed: {str(e)}",
+            Subject="PIPELINE ERROR ALERT"
+        )
         raise e  # Important: throwing error to be catched by SNS

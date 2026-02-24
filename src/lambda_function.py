@@ -9,7 +9,7 @@ os.environ['KAGGLE_CONFIG_DIR'] = "/tmp"
 
 def lambda_handler(event, context):
     # PARAMETERS
-    BUCKET_NAME = 'konrad-ds-project-data'
+    BUCKET_NAME = os.environ.get('BUCKET_NAME')
     DATASET_NAME = 'syedanwarafridi/vehicle-sales-data'
     TEMP_FILE = '/tmp/car_prices.csv'
     current_date = datetime.now().strftime('%Y-%m-%d')
@@ -54,4 +54,11 @@ def lambda_handler(event, context):
 
     except Exception as e:
         print(f"Error: {str(e)}")
+        # Sending manually note to SNS
+        sns = boto3.client('sns')
+        sns.publish(
+            TopicArn=os.environ.get('SNS_TOPIC_ARN'),
+            Message=f"Lambda failed: {str(e)}",
+            Subject="PIPELINE ERROR ALERT"
+        )
         raise e
