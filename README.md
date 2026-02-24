@@ -39,7 +39,8 @@ cd kaggle_layer/python
 pip install kaggle -t .
 cd ..
 zip -r kaggle_layer.zip python
-aws lambda publish-layer-version --layer-name kaggle-library --zip-file fileb://kaggle_layer.zip --compatible-runtimes python3.12```
+aws lambda publish-layer-version --layer-name kaggle-library --zip-file fileb://kaggle_layer.zip --compatible-runtimes python3.12
+```
 4. **Partitioning**: Data is stored in the Refined Zone (refined_data/) partitioned by year and month (e.g., year=2026/month=2/) for optimized query performance.
 5. **Monitoring (AWS SNS)**: Instant email alerts on failure, managed via Lambda Destinations and internal error handling:
 ```python
@@ -47,7 +48,8 @@ sns.publish(
     TopicArn=os.environ.get('SNS_TOPIC_ARN'),
     Message=f"Lambda failed: {str(e)}",
     Subject="PIPELINE ERROR ALERT"
-)```
+)
+```
 6. **Permissions**: The Lambda execution role requires AmazonS3FullAccess, AmazonAthenaFullAccess, and AWSGlueConsoleFullAccess.
 7. `sql/create_table_vehicle_sales_parquet.sql`: SQL DDL for the optimized Parquet-based partitioned table.
 
