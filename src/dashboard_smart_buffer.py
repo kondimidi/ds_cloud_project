@@ -17,7 +17,7 @@ def run_query(query):
         region = st.secrets["aws"]["region_name"]
     except:
         # If secrets don't exist, pyathena will use local ~/.aws/credentials
-        aws_id, aws_key, region = None, None, None
+        aws_id, aws_key, region = None, None, "eu-central-1"
 
     conn = connect(
         s3_staging_dir='s3://konrad-ds-project-data/athena-results/',
