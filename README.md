@@ -59,7 +59,7 @@ sns.publish(
 *Example: Analysis shows that Airstream (RVs) dominates average prices, followed by luxury brands.*
 
 ## Dashboard's demo
-![Dahboard's video](reports/dashboard.mp4)
+![Dahboard's video](reports/dashboard.gif)
 *Live Demo: [LINK](https://dscloudproject-ykxkjvzapgrkdh4sh4q72y.streamlit.app/).*
 
 ## How to run
