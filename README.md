@@ -24,7 +24,8 @@ This initial phase focused on building the core logic and defining the database 
 5. `run_pipeline.py`: Orchestrates the local execution of the entire flow.
 
 ### Phase 2: Cloud Automation (Event-Driven Architecture)
-#### Architecture schema: [tag:Kaggle API] -> [tag:Lambda (Ingestion)] -> [tag:S3 (Raw)] -> [tag:Lambda (Transformation)] -> [tag:S3 (Refined/Parquet)] -> [tag:Athena] -> [tag:Streamlit]
+#### Architecture schema: 
+> [tag:Kaggle API] -> [tag:Lambda (Ingestion)] -> [tag:S3 (Raw)] -> [tag:Lambda (Transformation)] -> [tag:S3 (Refined/Parquet)] -> [tag:Athena] -> [tag:Streamlit]
 The project was scaled to AWS to ensure data freshness and cost optimization:
 1. **Ingestion (`src/lambda_function.py`)**: Triggered by **EventBridge (CRON)**. Fetches data via Kaggle API and saves it in the **Raw Zone** (`raw_data/{date}/`) using **Incremental Loading**.
     * **Runtime**: Python 3.12
