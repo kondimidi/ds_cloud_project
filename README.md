@@ -34,14 +34,42 @@ The pipeline follows a modern **Data Lakehouse** pattern:
 ## 🚀 Key Features
 
 ### Phase 1: Local Prototype
-* Initial ingestion and SQL schema definition (`sql/create_table_vehicle_sales.sql`).
-* Development of the core analysis logic in `src/analyze_data.py`.
+This initial phase focused on building the core logic and defining the database schema:
+1. `src/download_data.py`: Fetches raw data from Kaggle to local storage.
+2. `src/upload_to_s3.py`: Transfers CSV files to the AWS S3 `raw_data/` zone.
+3. `sql/create_table_vehicle_sales.sql`: Defines the initial schema for raw CSV data.
+4. `src/analyze_data.py`: Connects Python to Athena to generate business insights.
+5. `run_pipeline.py`: Orchestrates the local execution of the entire flow.
 
 ### Phase 2: Cloud Automation (Event-Driven)
-* **Incremental Loading:** Data fetched via Kaggle API and partitioned by `year/month` in S3.
-* **Format Optimization:** Automatic conversion from CSV to **Apache Parquet** for 90% faster queries and lower costs.
-* **Smart Monitoring:** Custom AWS SNS alerts integrated with Lambda Destinations for real-time failure notifications.
-* **Serverless SQL:** Using Athena to query partitioned data directly from S3 without managing servers.
+1. **Ingestion (`src/lambda_function.py`)**: Triggered by **EventBridge (CRON)**. Fetches data via Kaggle API and saves it in the **Raw Zone** (`raw_data/{date}/`) using **Incremental Loading**.
+    * **Runtime**: Python 3.12
+    * **Timeout**: 1 minute | **Memory**: 512 MB
+    * **Layers**: `AWSSDKPandas-Python312`, `kaggle-library`
+2. **Transformation (`src/lambda_function_parquet.py`)**: Triggered by **S3 Event Notifications** (Prefix: `raw_data/`). Cleans data with Pandas and converts it to **Apache Parquet**.
+    * **Runtime**: Python 3.12
+    * **Timeout**: 2 minutes | **Memory**: 1024 MB
+    * **Layers**: `AWSSDKPandas-Python312`
+3. **Custom Layer Creation**: To use the Kaggle API in Lambda, create a custom layer:
+```bash
+mkdir -p kaggle_layer/python
+cd kaggle_layer/python
+pip install kaggle -t .
+cd ..
+zip -r kaggle_layer.zip python
+aws lambda publish-layer-version --layer-name kaggle-library --zip-file fileb://kaggle_layer.zip --compatible-runtimes python3.12
+```
+4. **Partitioning**: Data is stored in the Refined Zone (refined_data/) partitioned by year and month (e.g., year=2026/month=2/) for optimized query performance.
+5. **Monitoring (AWS SNS)**: Instant email alerts on failure, managed via Lambda Destinations and internal error handling:
+```python
+sns.publish(
+    TopicArn=os.environ.get('SNS_TOPIC_ARN'),
+    Message=f"Lambda failed: {str(e)}",
+    Subject="PIPELINE ERROR ALERT"
+)
+```
+6. **Permissions**: The Lambda execution role requires AmazonS3FullAccess, AmazonAthenaFullAccess, and AWSGlueConsoleFullAccess.
+7. `sql/create_table_vehicle_sales_parquet.sql`: SQL DDL for the optimized Parquet-based partitioned table.
 
 ---
 
@@ -61,14 +89,14 @@ The pipeline follows a modern **Data Lakehouse** pattern:
 
 ### 2. AWS Environment Variables
 Set these variables in your Lambda functions:
-* `BUCKET_NAME`: Target S3 bucket name.
-* `SNS_TOPIC_ARN`: ARN for failure alerts.
-* `KAGGLE_USERNAME` / `KAGGLE_KEY`: For data ingestion.
+* `BUCKET_NAME`: Target S3 bucket name (`lambda_function.py`, `lambda_function_parquet.py`).
+* `SNS_TOPIC_ARN`: ARN for failure alerts (`lambda_function.py`, `lambda_function_parquet.py`).
+* `KAGGLE_USERNAME` / `KAGGLE_KEY`: For data ingestion (`lambda_function.py`). Obtain these from Kaggle Account settings -> Create New API Token. 
 
 ### 3. Local Run
 ```bash
 # Clone the repo
-git clone [https://github.com/twoja-nazwa-uzytkownika/nazwa-repozytorium.git](https://github.com/twoja-nazwa-uzytkownika/nazwa-repozytorium.git)
+git clone [https://github.com/your-username/repository-name.git](https://github.com/your-username/repository-name.git)
 
 # Install dependencies
 pip install -r requirements.txt
