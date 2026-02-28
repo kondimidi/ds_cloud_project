@@ -60,6 +60,7 @@ sns.publish(
 
 ## Dashboard's demo
 ![Dahboard's video](reports/dashboard.gif)
+
 *Live Demo: [LINK](https://dscloudproject-ykxkjvzapgrkdh4sh4q72y.streamlit.app/).*
 
 ## How to run
