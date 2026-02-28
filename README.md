@@ -1,7 +1,7 @@
 # Vehicle Sales Analysis Pipeline (AWS + Python)
 
 ## Project Overview
-Automated data pipeline that fetches vehicle sales data, store it in the cloud, and performs SQL-based analysis.
+Automated data pipeline that fetches vehicle sales data, store it in the cloud, performs SQL-based analysis and shows metrics in the online dashboard.
 
 ## Tech Stack
 - **Python**: Core logic and analysis (Pandas, Boto3 AWS Wrangler).
@@ -13,6 +13,7 @@ Automated data pipeline that fetches vehicle sales data, store it in the cloud, 
 - **AWS SNS**: Monitoring and email alerts for pipeline failures.
 - **Git**: Version control with feature-branching workflow.
 - **Kaggle API**: Source for vehicle sales datasets.
+- **Streamlit**: Cloud dashboard for datasets metrics.
 
 ### Phase 1: Local Prototype & SQL Setup
 This initial phase focused on building the core logic and defining the database schema:
@@ -56,6 +57,10 @@ sns.publish(
 ## Key Insights
 ![Top Makes Chart](reports/top_makes_prices.png)
 *Example: Analysis shows that Airstream (RVs) dominates average prices, followed by luxury brands.*
+
+## Dashboard's demo
+![Dahboard's video](reports/dashboard.mp4)
+*Live Demo: [LINK](https://dscloudproject-ykxkjvzapgrkdh4sh4q72y.streamlit.app/).*
 
 ## How to run
 1. Clone the repo.
