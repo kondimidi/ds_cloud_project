@@ -96,7 +96,7 @@ Set these variables in your Lambda functions:
 ### 3. Local Run
 ```bash
 # Clone the repo
-git clone [https://github.com/kondimidi/ds_cloud_project.git](https://github.com/kondimidi/ds_cloud_project.git)
+git clone https://github.com/kondimidi/ds_cloud_project.git
 
 # Install dependencies
 pip install -r requirements.txt
