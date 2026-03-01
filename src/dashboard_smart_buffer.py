@@ -54,10 +54,7 @@ df_brand_pool = get_data_for_brand(selected_make)
 
 # Extract unique years directly from the already retrieved DataFrame
 available_years = sorted(df_brand_pool['release_year'].unique().tolist(), reverse=True)
-if len(available_years) == 1:
-    selected_year = st.sidebar.select_slider("Select the year", value = available_years)
-else:
-    selected_year = st.sidebar.select_slider("Select the year", options = available_years)
+selected_year = st.sidebar.select_slider("Select the year", options = available_years), value = available_years)
 
 # LOCAL filtering (Pandas) – happens with every slider movement
 df_final = df_brand_pool[df_brand_pool['release_year'] == selected_year]
