@@ -36,7 +36,13 @@ st.sidebar.header("Filters settings")
 # Retrieve unique brands (Makes) from Parquet table
 @st.cache_data
 def get_makes():
-    return run_query("SELECT DISTINCT make FROM vehicle_sales_parquet ORDER BY make")['make'].tolist()
+    query = """
+            SELECT DISTINCT INITCAP(make) as normalized_make 
+            FROM vehicle_sales_parquet 
+            WHERE make IS NOT NULL AND make != 'None'
+            ORDER BY normalized_make
+    """
+    return run_query(query)['normalized_make'].tolist()
 
 all_makes = get_makes()
 selected_make = st.sidebar.selectbox("Select vehicle brand", all_makes)
@@ -44,7 +50,11 @@ selected_make = st.sidebar.selectbox("Select vehicle brand", all_makes)
 # Function retrieving all data of specific brand
 @st.cache_data
 def get_data_for_brand(make):
-    query = f"SELECT release_year, sellingprice, odometer, condition, state, model FROM vehicle_sales_parquet WHERE make = '{make}'"
+    query = f"""
+            SELECT release_year, sellingprice, odometer, condition, state, model 
+            FROM vehicle_sales_parquet 
+            WHERE INITCAP(make) = '{make}'
+    """
     return run_query(query)
 
 # ---APPLICATION LOGIC---
@@ -54,7 +64,13 @@ df_brand_pool = get_data_for_brand(selected_make)
 
 # Extract unique years directly from the already retrieved DataFrame
 available_years = sorted(df_brand_pool['release_year'].unique().tolist(), reverse=True)
-selected_year = st.sidebar.select_slider("Select the year", options = available_years)
+# Check if there is more than one year to avoid RangeError
+if len(available_years) > 1:
+    selected_year = st.sidebar.select_slider("Select the year", options=available_years)
+else:
+    # If only one year exists, just select it and show info
+    selected_year = available_years[0]
+    st.sidebar.info(f"Only model year {selected_year} available for {selected_make}")
 
 # LOCAL filtering (Pandas) – happens with every slider movement
 df_final = df_brand_pool[df_brand_pool['release_year'] == selected_year]
