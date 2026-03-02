@@ -15,12 +15,13 @@ def run_query(query):
         aws_id = st.secrets["aws"]["aws_access_key_id"]
         aws_key = st.secrets["aws"]["aws_secret_access_key"]
         region = st.secrets["aws"]["region_name"]
+        s3_staging = st.secrets["aws"]["s3_staging_dir"]
     except:
         # If secrets don't exist, pyathena will use local ~/.aws/credentials
         aws_id, aws_key, region = None, None, "eu-central-1"
 
     conn = connect(
-        s3_staging_dir='s3://konrad-ds-project-data/athena-results/',
+        s3_staging_dir=s3_staging,
         region_name=region,
         aws_access_key_id=aws_id,
         aws_secret_access_key=aws_key
@@ -38,7 +39,7 @@ st.sidebar.header("Filters settings")
 def get_makes():
     query = """
         SELECT DISTINCT 
-            upper(substring(make, 1, 1)) || lower(substring(make, 2)) as normalized_make
+            regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) as normalized_make
         FROM vehicle_sales_parquet
         WHERE make IS NOT NULL AND make != 'None'
         ORDER BY normalized_make
@@ -54,7 +55,7 @@ def get_data_for_brand(make):
     query = f"""
         SELECT release_year, sellingprice, odometer, condition, state, model
         FROM vehicle_sales_parquet
-        WHERE upper(substring(make, 1, 1)) || lower(substring(make, 2)) = '{make}'
+        WHERE regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) = '{make}'
     """
     return run_query(query)
 

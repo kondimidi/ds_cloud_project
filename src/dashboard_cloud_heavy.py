@@ -10,7 +10,7 @@ st.set_page_config(page_title="Vehicle Sales Dashboard", layout="wide")
 # Connection function (uses local AWS Credentials)
 def run_query(query):
     conn = connect(
-        s3_staging_dir='s3://konrad-ds-project-data/athena-results/',
+        s3_staging_dir=os.environ.get('S3_STAGING_DIR'),
         region_name='eu-central-1'
     )
     return pd.read_sql(query, conn)
@@ -24,7 +24,14 @@ st.sidebar.header("Filters settings")
 # Retrieve unique brands (Makes) from Parquet table
 @st.cache_data
 def get_makes():
-    return run_query("SELECT DISTINCT make FROM vehicle_sales_parquet ORDER BY make")['make'].tolist()
+    query = """
+        SELECT DISTINCT 
+            regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) as normalized_make
+        FROM vehicle_sales_parquet
+        WHERE make IS NOT NULL AND make != 'None'
+        ORDER BY normalized_make
+    """
+    return run_query(query)['normalized_make'].tolist()
 
 all_makes = get_makes()
 selected_make = st.sidebar.selectbox("Select vehicle brand", all_makes)
@@ -32,11 +39,20 @@ selected_make = st.sidebar.selectbox("Select vehicle brand", all_makes)
 # Collect production years for the selected brand
 @st.cache_data
 def get_years(make):
-    query = f"SELECT DISTINCT release_year FROM vehicle_sales_parquet WHERE make = '{make}' ORDER BY release_year DESC"
+    query = f"""
+        SELECT DISTINCT release_year 
+        FROM vehicle_sales_parquet 
+        WHERE regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) = '{make}' 
+        ORDER BY release_year DESC"""
     return  run_query(query)['release_year'].tolist()
 
 available_years = get_years(selected_make)
-selected_year = st.sidebar.select_slider("Select the year", options = available_years)
+if len(available_years) > 1:
+    selected_year = st.sidebar.select_slider("Select the year", options=available_years)
+else:
+    # If only one year exists, just select it and show info
+    selected_year = available_years[0]
+    st.sidebar.info(f"Only model year {selected_year} available for {selected_make}")
 
 # Downloading data for selected filters
 query_main = f"""
@@ -45,7 +61,8 @@ query_main = f"""
         avg(sellingprice) as avg_price,
         avg(odometer) as avg_mileage
     FROM vehicle_sales_parquet
-    WHERE make = '{selected_make}' AND release_year = {selected_year} 
+    WHERE regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) = '{selected_make}' 
+    AND release_year = {selected_year} 
 """
 
 df_metrics = run_query(query_main)
@@ -66,7 +83,8 @@ st.subheader(f"Price analysis for the brand {selected_make} ({selected_year})")
 query_charts = f"""
     SELECT condition, sellingprice, odometer, model
     FROM vehicle_sales_parquet
-    WHERE make = '{selected_make}' AND release_year = {selected_year}
+    WHERE regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) = '{selected_make}' 
+    AND release_year = {selected_year}
 """
 
 @st.cache_data
@@ -93,7 +111,8 @@ st.subheader("Geopgraphic Analysis (States)")
 query_states = f"""
     SELECT state, count(*) as count, avg(sellingprice) as avg_price
     FROM vehicle_sales_parquet
-    WHERE make = '{selected_make}' AND release_year = {selected_year}
+    WHERE regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) = '{selected_make}' 
+    AND release_year = {selected_year}
     GROUP BY state
     ORDER BY count DESC
 """

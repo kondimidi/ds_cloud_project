@@ -42,6 +42,7 @@ This initial phase focused on building the core logic and defining the database 
 5. `run_pipeline.py`: Orchestrates the local execution of the entire flow.
 
 ### Phase 2: Cloud Automation (Event-Driven)
+This next phase focused on recreating the process of the first one in the order to be manage by AWS environment.
 1. **Ingestion (`src/lambda_function.py`)**: Triggered by **EventBridge (CRON)**. Fetches data via Kaggle API and saves it in the **Raw Zone** (`raw_data/{date}/`) using **Incremental Loading**.
     * **Runtime**: Python 3.12
     * **Timeout**: 1 minute | **Memory**: 512 MB
@@ -71,6 +72,19 @@ sns.publish(
 6. **Permissions**: The Lambda execution role requires AmazonS3FullAccess, AmazonAthenaFullAccess, and AWSGlueConsoleFullAccess.
 7. `sql/create_table_vehicle_sales_parquet.sql`: SQL DDL for the optimized Parquet-based partitioned table.
 
+### Phase 3: Data Visualization & Serving
+Developed a serverless dashboard using Streamlit Cloud with two architectural approaches:
+1. **Cloud-Heavy Approach (`src/dashboard_cloud_heavy.py`)**: 
+   * Delegates all aggregations to AWS Athena. 
+   * **Best for:** Massive datasets (Big Data) where local RAM is insufficient.
+   * **Trade-off:** Higher AWS costs due to frequent S3 scanning.
+2. **Smart Buffer Approach (`src/dashboard_smart_buffer.py`)**: 
+   * Fetches full brand data into a Pandas DataFrame and performs sub-filtering locally.
+   * **Best for:** Optimal User Experience and cost reduction.
+   * **Trade-off:** Requires more RAM on the hosting server.
+3. **Data Cleaning at Source**: Implemented Trino-compatible SQL logic to handle case normalization (`UPPER/LOWER`) and filter out `NULL/None` values directly in Athena, ensuring clean data ingestion into the UI.
+4. **Athena Staging**: Results of all dashboard queries are managed in: `s3://konrad-ds-project-data/athena-results/`.
+
 ---
 
 ## 📊 Dashboard Demo
@@ -92,6 +106,7 @@ Set these variables in your Lambda functions:
 * `BUCKET_NAME`: Target S3 bucket name (`lambda_function.py`, `lambda_function_parquet.py`).
 * `SNS_TOPIC_ARN`: ARN for failure alerts (`lambda_function.py`, `lambda_function_parquet.py`).
 * `KAGGLE_USERNAME` / `KAGGLE_KEY`: For data ingestion (`lambda_function.py`). Obtain these from Kaggle Account settings -> Create New API Token. 
+* `S3_STAGING_DIR`: The S3 path where Athena will store query results (e.g., s3://your-bucket-name/athena-results/).
 
 ### 3. Local Run
 ```bash
