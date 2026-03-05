@@ -47,7 +47,7 @@ This next phase focused on recreating the process of the first one in the order 
     * **Runtime**: Python 3.12
     * **Timeout**: 1 minute | **Memory**: 512 MB
     * **Layers**: `AWSSDKPandas-Python312`, `kaggle-library`
-2. **Transformation (`src/lambda_function_parquet.py`)**: Triggered by **S3 Event Notifications** (Prefix: `raw_data/`). Cleans data with Pandas and converts it to **Apache Parquet**.
+2. **Transformation (`src/lambda_function_parquet.py`)**: Triggered by **S3 Event Notifications** (Prefix: `raw_data/`). Cleans data with Pandas, converts it to **Apache Parquet**, deletes data from month before and joining new to the old parquet `vehicle_sales_parquet`.
     * **Runtime**: Python 3.12
     * **Timeout**: 2 minutes | **Memory**: 1024 MB
     * **Layers**: `AWSSDKPandas-Python312`
@@ -94,6 +94,11 @@ Developed a serverless dashboard using Streamlit Cloud with two architectural ap
 *The dashboard features a **Smart Buffer** logic: it fetches data once per brand selection to minimize AWS Athena costs while providing instant filtering for production years.*
 
 ---
+
+## 🚀 Future Improvements
+
+* Implement Entity Resolution using fuzzy matching (e.g., Levenshtein distance) to unify brand names like 'VW' and 'Volkswagen'.
+* Integrate a Machine Learning model to predict vehicle prices based on mileage and condition.
 
 ## ⚙️ Setup & Installation
 
