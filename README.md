@@ -14,21 +14,21 @@
 
 ```mermaid
 graph LR
-    A[Kaggle API] -- Cron Every Month --> B(Lambda Ingest)
-    B --> C{S3 Raw Zone}
-    C -- S3 Event --> D(Lambda Transform)
-    D --> E{S3 Refined Zone}
-    E --> F[AWS Glue Catalog]
-    F --> G[AWS Athena]
-    G --> H[Streamlit Cloud]
-    
-    subgraph Monitoring
-    D -.-> I[AWS SNS Email]
-    end
-    
-    subgraph Storage Optimization
-    E -.-> J[Parquet Format]
-    end
+	A[Kaggle API] -- Cron Every Month --> B(Lambda Ingest)
+	B --> C{S3 Raw Zone}
+	C -- S3 Event --> D(Lambda Transform)
+	D --> E{S3 Refined Zone}
+	E --> F[AWS Glue Catalog]
+	F --> G[AWS Athena]
+	G --> H[Streamlit Cloud]
+	
+	subgraph Monitoring
+	D -.-> I[AWS SNS Email]
+	end
+
+	subgraph Storage Optimization
+	E -.-> J[Parquet Format]
+	end
 
 ---
 
