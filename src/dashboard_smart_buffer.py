@@ -38,13 +38,12 @@ st.sidebar.header("Filters settings")
 @st.cache_data
 def get_makes():
     query = """
-        SELECT DISTINCT 
-            regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) as normalized_make
+        SELECT DISTINCT make
         FROM vehicle_sales_parquet
-        WHERE make IS NOT NULL AND make != 'None'
-        ORDER BY normalized_make
+        WHERE make IS NOT NULL AND make != 'Nan'
+        ORDER BY make
     """
-    return run_query(query)['normalized_make'].tolist()
+    return run_query(query)['make'].tolist()
 
 all_makes = get_makes()
 selected_make = st.sidebar.selectbox("Select vehicle brand", all_makes)
@@ -55,7 +54,7 @@ def get_data_for_brand(make):
     query = f"""
         SELECT release_year, sellingprice, odometer, condition, state, model
         FROM vehicle_sales_parquet
-        WHERE regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) = '{make}'
+        WHERE make = '{make}'
     """
     return run_query(query)
 

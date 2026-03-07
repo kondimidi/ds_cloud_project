@@ -25,13 +25,12 @@ st.sidebar.header("Filters settings")
 @st.cache_data
 def get_makes():
     query = """
-        SELECT DISTINCT 
-            regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) as normalized_make
+        SELECT DISTINCT make
         FROM vehicle_sales_parquet
-        WHERE make IS NOT NULL AND make != 'None'
-        ORDER BY normalized_make
+        WHERE make IS NOT NULL AND make != 'Nan'
+        ORDER BY make
     """
-    return run_query(query)['normalized_make'].tolist()
+    return run_query(query)['make'].tolist()
 
 all_makes = get_makes()
 selected_make = st.sidebar.selectbox("Select vehicle brand", all_makes)
@@ -42,7 +41,7 @@ def get_years(make):
     query = f"""
         SELECT DISTINCT release_year 
         FROM vehicle_sales_parquet 
-        WHERE regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) = '{make}' 
+        WHERE make = '{make}' 
         ORDER BY release_year DESC"""
     return  run_query(query)['release_year'].tolist()
 
@@ -61,7 +60,7 @@ query_main = f"""
         avg(sellingprice) as avg_price,
         avg(odometer) as avg_mileage
     FROM vehicle_sales_parquet
-    WHERE regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) = '{selected_make}' 
+    WHERE make = '{selected_make}' 
     AND release_year = {selected_year} 
 """
 
@@ -83,7 +82,7 @@ st.subheader(f"Price analysis for the brand {selected_make} ({selected_year})")
 query_charts = f"""
     SELECT condition, sellingprice, odometer, model
     FROM vehicle_sales_parquet
-    WHERE regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) = '{selected_make}' 
+    WHERE make = '{selected_make}' 
     AND release_year = {selected_year}
 """
 
@@ -111,7 +110,7 @@ st.subheader("Geopgraphic Analysis (States)")
 query_states = f"""
     SELECT state, count(*) as count, avg(sellingprice) as avg_price
     FROM vehicle_sales_parquet
-    WHERE regexp_replace(make, '(\w)(\w*)', x -> upper(x[1]) || lower(x[2])) = '{selected_make}' 
+    WHERE make = '{selected_make}' 
     AND release_year = {selected_year}
     GROUP BY state
     ORDER BY count DESC

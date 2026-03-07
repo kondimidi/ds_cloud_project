@@ -24,9 +24,11 @@ def lambda_handler(event, context):
         # Wrangler taking care of communication with S3
         df = wr.s3.read_csv(path=S3_SOURCE_PATH)
 
-        # 2. Cleaning columns names
+        # 2. Cleaning data
         df = df.rename(columns={'year': 'release_year', 'trim': 'car_trim'})
         df.columns = [c.lower() for c in df.columns]
+        # Brands names standardization
+        df['make'] = df['make'].astype(str).str.title().str.strip()
 
         # 3. Delete old month and upload new as Parquet
         # Calculate the previous month
