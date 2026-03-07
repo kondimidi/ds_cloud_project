@@ -28,7 +28,7 @@ graph LR
     
     subgraph Storage Optimization
     E -.-> J[Parquet Format]
-    end
+    END
 
 ---
 
