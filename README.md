@@ -13,7 +13,6 @@
 ## 🗺️ System Architecture
 
 
-The pipeline follows a modern **Data Lakehouse** pattern:
 graph LR
     A[Kaggle API] -- Cron Every Month --> B(Lambda Ingest)
     B --> C{S3 Raw Zone}
