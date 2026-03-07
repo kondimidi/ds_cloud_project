@@ -66,15 +66,6 @@ This next phase focused on recreating the process of the first one in the order 
 3.  **Metadata Sync**: Uses `MSCK REPAIR TABLE` via Boto3 to keep the Glue Catalog synchronized with S3 automatically.
 4.  **Monitoring**: Integrated **AWS SNS** for instant email alerts on pipeline failures via Lambda Destinations.
 
----
-
-## 💰 Cost Optimization & Management
-A strategic decision was made to use a **Serverless Data Lake** instead of a traditional RDS instance:
-
-* **Athena vs. RDS**: By choosing Athena, the project avoids the fixed 24/7 costs of an RDS/Aurora instance.
-* **Lifecycle Policies**: Automated S3 Lifecycle rules expire `athena-results/` every 7 days (`raw_data/` every 30 days), preventing storage clutter.
-* **Budgeting**: **AWS Budgets** implemented with email triggers to monitor the credit utilization and prevent unexpected billing.
-
 ### Phase 3: Data Visualization & Serving
 Developed a serverless dashboard using Streamlit Cloud with two architectural approaches:
 1. **Cloud-Heavy Approach (`src/dashboard_cloud_heavy.py`)**: 
@@ -87,6 +78,15 @@ Developed a serverless dashboard using Streamlit Cloud with two architectural ap
    * **Trade-off:** Requires more RAM on the hosting server.
 3. **Data Cleaning at Source**: Implemented Trino-compatible SQL logic to filter out `NULL/Nan` values directly in Athena, ensuring clean data ingestion into the UI.
 4. **Athena Staging**: Results of all dashboard queries are managed in: `s3://konrad-ds-project-data/athena-results/`.
+
+---
+
+## 💰 Cost Optimization & Management
+A strategic decision was made to use a **Serverless Data Lake** instead of a traditional RDS instance:
+
+* **Athena vs. RDS**: By choosing Athena, the project avoids the fixed 24/7 costs of an RDS/Aurora instance.
+* **Lifecycle Policies**: Automated S3 Lifecycle rules expire `athena-results/` every 7 days (`raw_data/` every 30 days), preventing storage clutter.
+* **Budgeting**: **AWS Budgets** implemented with email triggers to monitor the credit utilization and prevent unexpected billing.
 
 ---
 
