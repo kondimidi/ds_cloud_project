@@ -12,7 +12,7 @@
 
 ## 🗺️ System Architecture
 
-
+```mermaid
 graph LR
     A[Kaggle API] -- Cron Every Month --> B(Lambda Ingest)
     B --> C{S3 Raw Zone}
@@ -28,7 +28,7 @@ graph LR
     
     subgraph Storage Optimization
     E -.-> J[Parquet Format]
-End
+    end
 
 ---
 
