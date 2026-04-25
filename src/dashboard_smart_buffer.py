@@ -4,7 +4,7 @@ import requests
 from pyathena import connect
 
 API_URL = "https://2m33d7cna7.execute-api.eu-central-1.amazonaws.com/predict"
-tab_analytics, tab_prediction = st.tabs(["Analiza Rynku", "Wycena Pojazdu"])
+tab_analytics, tab_prediction = st.tabs(["Market Analysis", "Vehicle Appraisal"])
 
 with tab_analytics:
     # Smart Buffer option
@@ -173,7 +173,7 @@ with tab_prediction:
     if submit_button:
         # Preparing data for the API
         payload = {
-            "car_data":{
+            "car_data": {
                 "year": year,
                 "make": make,
                 "model": model,
@@ -184,26 +184,26 @@ with tab_prediction:
             }
         }
 
-    try:
-        with st.spinner("Market data is currently being analyzed ..."):
-            response = requests.post(API_URL, json=payload)
-            result = response.json()
+        try:
+            with st.spinner("Market data is currently being analyzed ..."):
+                response = requests.post(API_URL, json=payload)
+                result = response.json()
 
-        if response.status_code == 200:
-            # When Lambda function returns the body as a string (using `json.dumps`)
-            # it need to be parsed. If it returns an object, is used directly
-            if isinstance(result.get('body'), str):
-                import json
-                prediction_data = json.loads(result['body'])
+            if response.status_code == 200:
+                # When Lambda function returns the body as a string (using `json.dumps`)
+                # it need to be parsed. If it returns an object, is used directly
+                if isinstance(result.get('body'), str):
+                    import json
+                    prediction_data = json.loads(result['body'])
+                else:
+                    prediction_data = result['body']
+
+                price = prediction_data['predicted_price']
+
+                st.success(f"### Estimated market value: ${price:,.2f}")
+                st.info("Please note that this estimate is based on historical data and may differ from offers at dealerships.")
             else:
-                prediction_data =  result['body']
-
-            price = prediction_data['predicted_price']
-
-            st.success(f"### Estimated market value: ${price:,.2f}")
-            st.info("Please note that this estimate is based on historical data and may differ from offers at dealerships.")
-        else:
-            st.error(f"API error ({response.status_code}): {result.get('error', 'Unknown error')}")
-    except Exception as e:
-        st.error(f"Unable to connect to the pricing server: {e}")
+                st.error(f"API error ({response.status_code}): {result.get('error', 'Unknown error')}")
+        except Exception as e:
+            st.error(f"Unable to connect to the pricing server: {e}")
 
