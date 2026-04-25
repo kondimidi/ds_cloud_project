@@ -3,14 +3,14 @@ import pandas as pd
 import requests
 from pyathena import connect
 
+st.set_page_config(page_title="Vehicle Sales Dashboard", layout="wide")
+
 API_URL = "https://2m33d7cna7.execute-api.eu-central-1.amazonaws.com/predict"
 tab_analytics, tab_prediction = st.tabs(["Market Analysis", "Vehicle Appraisal"])
 
 with tab_analytics:
     # Smart Buffer option
     # Page settings
-    st.set_page_config(page_title="Vehicle Sales Dashboard", layout="wide")
-
     # Connection function (uses local AWS Credentials)
     def run_query(query):
         # Try to get credentials from Streamlit Secrets (Cloud),
@@ -190,17 +190,14 @@ with tab_prediction:
                 result = response.json()
 
             if response.status_code == 200:
-                # When Lambda function returns the body as a string (using `json.dumps`)
-                # it need to be parsed. If it returns an object, is used directly
-                if isinstance(result.get('body'), str):
-                    import json
-                    prediction_data = json.loads(result['body'])
+                # In the HTTP API, `result` the response (e.g., {'predicted_price': ...})
+                price = result.get('predicted_price')
+                
+                if price:
+                    st.success(f"### Estimated market value: ${price:,.2f}")
                 else:
-                    prediction_data = result['body']
+                    st.write(result)
 
-                price = prediction_data['predicted_price']
-
-                st.success(f"### Estimated market value: ${price:,.2f}")
                 st.info("Please note that this estimate is based on historical data and may differ from offers at dealerships.")
             else:
                 st.error(f"API error ({response.status_code}): {result.get('error', 'Unknown error')}")
