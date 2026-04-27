@@ -8,6 +8,23 @@ st.set_page_config(page_title="Vehicle Sales Dashboard", layout="wide")
 API_URL = "https://2m33d7cna7.execute-api.eu-central-1.amazonaws.com/predict"
 tab_analytics, tab_prediction = st.tabs(["Market Analysis", "Vehicle Appraisal"])
 
+body_clean = ['Access Cab', 'Beetle Convertible', 'Cab Plus', 'Cab Plus 4',
+       'Club Cab', 'Convertible', 'Coupe', 'Crew Cab', 'Crewmax Cab',
+       'Cts Coupe', 'Cts Wagon', 'Cts-V Coupe', 'Cts-V Wagon',
+       'Double Cab', 'E-Series Van', 'Elantra Coupe', 'Extended Cab',
+       'G Convertible', 'G Coupe', 'G Sedan', 'G37 Convertible',
+       'G37 Coupe', 'Genesis Coupe', 'Granturismo Convertible',
+       'Hatchback', 'King Cab', 'Koup', 'Mega Cab', 'Minivan', 'Nan',
+       'Navitgation', 'Promaster Cargo Van', 'Q60 Convertible',
+       'Q60 Coupe', 'Quad Cab', 'Ram Van', 'Regular Cab', 'Regular-Cab',
+       'Sedan', 'Supercab', 'Supercrew', 'Suv', 'Transit Van',
+       'Tsx Sport Wagon', 'Van', 'Wagon', 'Xtracab']
+
+state_usa = ['al','ak','az','ar','ct','sd','nd','de','fl','ga','hi','id','il','in',
+             'ia','ca','ks','sc','nc','ky','co','la','me','md','ma','mi','mn','ms',
+             'mo','mt','ne','nv','nh','nj','ny','nm','oh','ok','or','pa','ri','tx',
+             'tn','ut','vt','wa','va','wv','wi','wy']
+
 with tab_analytics:
     # Smart Buffer option
     # Page settings
@@ -161,12 +178,12 @@ with tab_prediction:
             make = st.selectbox("Marka", all_makes)
             model = st.text_input("Model (e.g. Fusion, Escape)", "Fusion")
             year = st.number_input("Manufacture year", min_value=1990, max_value=2025, value=2014)
-            body = st.selectbox("Body style", ["sedan", "SUV", "hatchback", "coupe", "convertible", "wagon"])
+            body = st.selectbox("Body style (Nan - no information available)", body_clean)
 
         with col2:
             odometer = st.number_input("Mileage (miles)", min_value=0, value=50000)
             condition = st.slider("Technical condition (1-49)", 1, 49, 20, step=1)
-            state = st.text_input("USA State (code, e.g. ca, tx, fl)", "ca").lower()
+            state = st.selectbox("USA State (code, e.g. ca, tx, fl)", state_usa)
 
         submit_button = st.form_submit_button("Get a quote")
 
