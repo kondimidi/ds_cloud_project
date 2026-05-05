@@ -1,7 +1,7 @@
 import os
-from src.download_data import download_dataset
-from src.upload_to_s3 import upload_to_s3
-from src.analyze_data import run_analysis
+from src.data_pipeline.download_data import download_dataset
+from src.data_pipeline.upload_to_s3 import upload_to_s3
+from src.analytics.analyze_data import run_analysis
 
 def run_everything():
     # 1. Confugiration

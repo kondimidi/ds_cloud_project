@@ -1,5 +1,7 @@
 # Folders
 data/
+models/
+artifacts/
 *.json
 
 # Byte-compiled / optimized / DLL files

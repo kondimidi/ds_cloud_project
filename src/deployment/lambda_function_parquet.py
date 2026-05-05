@@ -4,7 +4,6 @@ import boto3
 from datetime import datetime, timedelta
 import awswrangler as wr
 import pandas as pd
-import requests
 from rapidfuzz import process, fuzz
 
 # Connectiong to DynamoDB

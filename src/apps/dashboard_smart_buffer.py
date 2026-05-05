@@ -3,14 +3,31 @@ import pandas as pd
 import requests
 from pyathena import connect
 
+st.set_page_config(page_title="Vehicle Sales Dashboard", layout="wide")
+
 API_URL = "https://2m33d7cna7.execute-api.eu-central-1.amazonaws.com/predict"
-tab_analytics, tab_prediction = st.tabs(["Market Analysis", "Vehicle Appraisal"])
+tab_analytics, tab_prediction = st.tabs(["Market Analysis", "Vehicle Valuation"])
+
+body_clean = ['Access Cab', 'Beetle Convertible', 'Cab Plus', 'Cab Plus 4',
+       'Club Cab', 'Convertible', 'Coupe', 'Crew Cab', 'Crewmax Cab',
+       'Cts Coupe', 'Cts Wagon', 'Cts-V Coupe', 'Cts-V Wagon',
+       'Double Cab', 'E-Series Van', 'Elantra Coupe', 'Extended Cab',
+       'G Convertible', 'G Coupe', 'G Sedan', 'G37 Convertible',
+       'G37 Coupe', 'Genesis Coupe', 'Granturismo Convertible',
+       'Hatchback', 'King Cab', 'Koup', 'Mega Cab', 'Minivan', 'Nan',
+       'Navitgation', 'Promaster Cargo Van', 'Q60 Convertible',
+       'Q60 Coupe', 'Quad Cab', 'Ram Van', 'Regular Cab', 'Regular-Cab',
+       'Sedan', 'Supercab', 'Supercrew', 'Suv', 'Transit Van',
+       'Tsx Sport Wagon', 'Van', 'Wagon', 'Xtracab']
+
+state_usa = ['al','ak','az','ar','ct','sd','nd','de','fl','ga','hi','id','il','in',
+             'ia','ca','ks','sc','nc','ky','co','la','me','md','ma','mi','mn','ms',
+             'mo','mt','ne','nv','nh','nj','ny','nm','oh','ok','or','pa','ri','tx',
+             'tn','ut','vt','wa','va','wv','wi','wy']
 
 with tab_analytics:
     # Smart Buffer option
     # Page settings
-    st.set_page_config(page_title="Vehicle Sales Dashboard", layout="wide")
-
     # Connection function (uses local AWS Credentials)
     def run_query(query):
         # Try to get credentials from Streamlit Secrets (Cloud),
@@ -161,12 +178,12 @@ with tab_prediction:
             make = st.selectbox("Marka", all_makes)
             model = st.text_input("Model (e.g. Fusion, Escape)", "Fusion")
             year = st.number_input("Manufacture year", min_value=1990, max_value=2025, value=2014)
-            body = st.selectbox("Body style", ["sedan", "SUV", "hatchback", "coupe", "convertible", "wagon"])
+            body = st.selectbox("Body style (Nan - no information available)", body_clean)
 
         with col2:
             odometer = st.number_input("Mileage (miles)", min_value=0, value=50000)
             condition = st.slider("Technical condition (1-49)", 1, 49, 20, step=1)
-            state = st.text_input("USA State (code, e.g. ca, tx, fl)", "ca").lower()
+            state = st.selectbox("USA State (code, e.g. ca, tx, fl)", state_usa)
 
         submit_button = st.form_submit_button("Get a quote")
 
@@ -190,17 +207,14 @@ with tab_prediction:
                 result = response.json()
 
             if response.status_code == 200:
-                # When Lambda function returns the body as a string (using `json.dumps`)
-                # it need to be parsed. If it returns an object, is used directly
-                if isinstance(result.get('body'), str):
-                    import json
-                    prediction_data = json.loads(result['body'])
+                # In the HTTP API, `result` the response (e.g., {'predicted_price': ...})
+                price = result.get('predicted_price')
+                
+                if price:
+                    st.success(f"### Estimated market value: ${price:,.2f}")
                 else:
-                    prediction_data = result['body']
+                    st.write(result)
 
-                price = prediction_data['predicted_price']
-
-                st.success(f"### Estimated market value: ${price:,.2f}")
                 st.info("Please note that this estimate is based on historical data and may differ from offers at dealerships.")
             else:
                 st.error(f"API error ({response.status_code}): {result.get('error', 'Unknown error')}")

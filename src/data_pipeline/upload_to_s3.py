@@ -1,5 +1,5 @@
 import boto3
-import os
+from pathlib import Path
 from botocore.exceptions import NoCredentialsError
 
 def upload_to_s3(local_file, bucket, s3_file):
@@ -23,7 +23,7 @@ def upload_to_s3(local_file, bucket, s3_file):
 if __name__ == "__main__":
     # Define your variables
     BUCKET_NAME = 'konrad-ds-project-data'  # Replace with your actual bucket name
-    LOCAL_FILE_PATH = 'data/car_prices.csv' # Check your actual filename in data/ folder
-    S3_FILE_NAME = 'raw_data/car_prices_v1.csv' # How it will be named in S3
+    LOCAL_FILE_PATH = Path(__file__).resolve().parent.parent.parent / "models/v1/model_normal.joblib"
+    S3_FILE_NAME = 'models/v1/model_normal.joblib' # How it will be named in S3
 
     upload_to_s3(LOCAL_FILE_PATH, BUCKET_NAME, S3_FILE_NAME)
