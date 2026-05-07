@@ -1,9 +1,0 @@
-data/ – tu będą lądować pliki (pamiętaj, nigdy nie wrzucamy dużych danych na GitHub!).
-
-notebooks/ – tu robisz brudnopis i eksplorację danych (EDA).
-
-src/ – (Source) tu będziemy trzymać "czysty" kod Pythona w plikach .py.
-
-requirements.txt – lista bibliotek potrzebnych do projektu.
-
-.gitignore – plik, który mówi Gitowi, czego ma nie wysyłać do sieci (np. haseł, dużych danych).
