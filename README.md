@@ -6,7 +6,7 @@
 
 > **End-to-End Data Engineering project** that automates ingestion, transformation, and visualization of vehicle sales data using a serverless AWS architecture.
 
-🔗 **[Live Dashboard Demo](https://dscloudproject-ykxkjvzapgrkdh4sh4q72y.streamlit.app/)**
+🔗 **[Live Dashboard Demo](https://dscloudproject-i3s7cs47ownxgnvko7ptyp.streamlit.app/)**
 
 ---
 
