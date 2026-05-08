@@ -47,6 +47,13 @@ graph TD
         AT --> ST[Streamlit Cloud]
     end
 
+    subgraph Prediction_Layer [Real-time Prediction]
+        ECR[(Amazon ECR)] --> L_INF(Lambda: Inference/Docker)
+        ST -- POST Request --> APIG[API Gateway]
+        APIG --> L_INF
+        L_INF -- JSON Response --> ST
+    end
+
     %% Style
     style DDB fill:#f96,stroke:#333,stroke-width:2px
     style L1 fill:#bbf,stroke:#333,stroke-width:1px
@@ -83,7 +90,29 @@ To handle typos and inconsistent naming (e.g., "VW" vs "Volkswagen"), the pipeli
 * **Data Catalog & Query:** AWS Glue, AWS Athena (SQL)
 * **Monitoring:** AWS SNS (Email Alerts)
 * **Visualization:** Streamlit Cloud, Pandas, Matplotlib/Seaborn
-* **CI/CD & Tools:** Git (Feature-branching), Kaggle API, NHTSA vPIC API
+* **CI/CD & Tools:** Git (Feature-branching), Kaggle API, NHTSA vPIC API, Amazon API Gateway
+* **Modeling:** XGBoost, Scikit-learn, Optuna (Hyperparameter Tuning), SHAP (Model Explainability)
+
+---
+
+## 📂 Project Structure
+
+The repository is organized into modular components:
+
+### 🔬 Notebooks (Research & Discovery)
+Comprehensive documentation of the analytical journey:
+* `01_Exploratory_Data_Analysis.ipynb`: Outlier detection (IQR) and market distribution analysis.
+* `02_Regression_and_Depreciation.ipynb`: Multicollinearity checks (VIF) and depreciation rate comparisons.
+* `03_Classification_Basics.ipynb`: Logistic regression and ROC/AUC performance metrics.
+* `04_Advanced_ML_and_Tuning.ipynb`: Bayesian Optimization with **Optuna** and SHAP explainability.
+* `05_Final_Production_Pipeline.ipynb`: Hierarchical modeling logic and Log-transformation implementation.
+
+### 💻 Source Code (`/src`)
+* `analytics/`: Scripts for data deep-dives and visualization.
+* `apps/`: **Smart Buffer Dashboard** – the main interactive interface.
+* `data_pipeline/`: Automated data ingestion, S3 uploads, and VIN enrichment.
+* `deployment/`: Lambda handlers and API Gateway testing scripts.
+* `model_engineering/`: The core training script for the production-ready models.
 
 ---
 
@@ -91,19 +120,19 @@ To handle typos and inconsistent naming (e.g., "VW" vs "Volkswagen"), the pipeli
 
 ### Phase 1: Local Prototype
 This initial phase focused on building the core logic and defining the database schema:
-1. `src/download_data.py`: Fetches raw data from Kaggle to local storage.
-2. `src/upload_to_s3.py`: Transfers CSV files to the AWS S3 `raw_data/` zone.
-3. `src/analyze_data.py`: Connects Python to Athena to generate business insights.
+1. `src/data_pipeline/download_data.py`: Fetches raw data from Kaggle to local storage.
+2. `src/data_pipeline/upload_to_s3.py`: Transfers CSV files to the AWS S3 `raw_data/` zone.
+3. `src/analytics/analyze_data.py`: Connects Python to Athena to generate business insights.
 4. `run_pipeline.py`: Orchestrates the local execution of the entire flow.
 
 ### Phase 2: Automated Serverless Pipeline
 This next phase focused on recreating the process of the first one in the order to be manage by AWS environment.
-1. **Ingestion (`src/lambda_function.py`)**: Triggered by **EventBridge (CRON)**. 
+1. **Ingestion (`src/deployment/lambda_function.py`)**: Triggered by **EventBridge (CRON)**. 
     * Fetches incremental data via Kaggle API and saves it in the **Raw Zone** (`raw_data/{date}/`) using **Incremental Loading**.
-2. **Enriching Data (`src/vin_enricher.py`)**: Triggered by **EventBridge (CRON)**.
+2. **Enriching Data (`src/data_pipeline/vin_enricher.py`)**: Triggered by **EventBridge (CRON)**.
     * Fetches official vehicle specifications (Make/Model) from NHTSA API based on VIN.
     * Populates the DynamoDB lookup table to act as a high-speed cache for the main pipeline.
-3.  **Transformation & Hygiene (`src/lambda_function_parquet.py`)**: Triggered by **S3 Events**.
+3.  **Transformation & Hygiene (`src/deployment/lambda_function_parquet.py`)**: Triggered by **S3 Events**.
     * **Data Recovery**: Fills missing values by performing a join-like operation with the DynamoDB.
     * **Normalization**: Standardizes vehicle names using Fuzzy Matching and Title Case formatting.
     * **Optimization**: Converts data to Apache Parquet and handles automatic Glue Catalog synchronization (MSCK REPAIR).
@@ -113,16 +142,40 @@ This next phase focused on recreating the process of the first one in the order 
 
 ### Phase 3: Data Visualization & Serving
 Developed a serverless dashboard using Streamlit Cloud with two architectural approaches:
-1. **Cloud-Heavy Approach (`src/dashboard_cloud_heavy.py`)**: 
+1. **Cloud-Heavy Approach (`src/apps/dashboard_cloud_heavy.py`)**: 
    * Delegates all aggregations to AWS Athena. 
    * **Best for:** Massive datasets (Big Data) where local RAM is insufficient.
    * **Trade-off:** Higher AWS costs due to frequent S3 scanning.
-2. **Smart Buffer Approach (`src/dashboard_smart_buffer.py`)**: 
+2. **Smart Buffer Approach (`src/apps/dashboard_smart_buffer.py`)**: 
    * Fetches full brand data into a Pandas DataFrame and performs sub-filtering locally.
    * **Best for:** Optimal User Experience and cost reduction.
    * **Trade-off:** Requires more RAM on the hosting server.
 3. **Data Cleaning at Source**: Implemented Trino-compatible SQL logic to filter out `NULL/Nan` values directly in Athena, ensuring clean data ingestion into the UI.
 4. **Athena Staging**: Results of all dashboard queries are managed in: `s3://konrad-ds-project-data/athena-results/`.
+
+### Phase 4: Predictive Price Model
+#### 1. Hierarchical Modeling Strategy
+To handle market diversity, the system uses two specialized models:
+- **Luxury Model:** Fine-tuned for high-end brands (Ferrari, Lamborghini, Tesla, etc.).
+- **Standard Model:** Optimized for high-volume market segments.
+
+#### 2. Serverless Inference
+The model is packaged into a **Docker Container** and deployed as an AWS Lambda function. This allows for near-instant scaling and "pay-as-you-go" execution costs.
+
+#### 3. Interactive Market Dashboard
+* Real-time price predictions via API calls.
+* Geographic sales distribution analysis.
+* Comparison of depreciation rates across brands.
+* Top 5 "Best Value" deals identification.
+
+---
+## 📈 Model Performance
+The **13.46% MAPE for Luxury models** is particularly impressive given the high variance in high-end vehicle pricing, where the **MAPE** of the **entry-level** line model was **81.32%.**
+
+| Segment | MAE | MAPE | Key Logic |
+| :--- | :--- | :--- | :--- |
+| Luxury | $3,801 | 13.46% | Targeted at brands like Ferrari, Tesla, Land Rover. |
+| Standard | $1,613 | 16.08% | Optimized for high-volume makes like Ford, Toyota. |
 
 ---
 
@@ -154,7 +207,6 @@ As the project grows, the following features are planned to enhance its robustne
 * **Brand Drift Monitoring**: Implement a monitoring system that notifies via SNS when a significant volume of new, unknown car brands (not in the canonical list) enters the pipeline.
 
 ### 📈 Advanced Analytics & Machine Learning
-* **Predictive Pricing Model**: Build and deploy a Machine Learning model (e.g., XGBoost via SageMaker) to predict vehicle market value based on mileage, condition, and historical trends.
 * **Interactive EDA Dashboard**: Expand the Streamlit UI with an Exploratory Data Analysis module to uncover hidden correlations (e.g., price vs. regional popularity).
 * **External Data Enrichment**: Implement Web Scraping to fetch real-time exchange rates or inflation data to analyze their impact on car market volatility.
 * **Data Quality Dashboard**: Add a dedicated view in Streamlit to monitor the % of recovered records via VIN decoding.
@@ -194,6 +246,12 @@ cd ..
 zip -r kaggle_layer.zip python
 aws lambda publish-layer-version --layer-name kaggle-library --zip-file fileb://kaggle_layer.zip --compatible-runtimes python3.12
 ```
+### 4a. **Container Image**
+The pricing model is deployed via Docker. Ensure AWS ECR repository is created before running push commands from the CI/CD context.
+1. **Build**: `docker build -t car-valuation-lambda .`
+2. **Tag**: `docker tag car-valuation-lambda:latest <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/car-valuation-lambda:latest`
+3. **Push**: `docker push <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/car-valuation-lambda:latest`
+*Note: Ensure your Lambda function is configured to use the 'Image' package type and has the necessary IAM permissions to pull from ECR.*
 
 ### 5. Database Setup (NoSQL)
 Before running the enrichment Lambdas, create a DynamoDB table:
