@@ -174,8 +174,9 @@ The **13.46% MAPE for Luxury models** is particularly impressive given the high 
 
 | Segment | MAE | MAPE | Key Logic |
 | :--- | :--- | :--- | :--- |
-| Luxury | $3,801 | 13.46% | Targeted at brands like Ferrari, Tesla, Land Rover. |
-| Standard | $1,613 | 16.08% | Optimized for high-volume makes like Ford, Toyota. |
+| Baseline (Simple Linear Regression) | $3380 | 81.32% | Targeted at all brands. |
+| Luxury (XGBoost + Log-Trans) | $3801 | 13.46% | Targeted at brands like Ferrari, Tesla, Land Rover. |
+| Standard (XGBoost + Log-Trans) | $1613 | 16.08% | Optimized for high-volume makes like Ford, Toyota. |
 
 ---
 
