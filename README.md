@@ -170,7 +170,7 @@ The model is packaged into a **Docker Container** and deployed as an AWS Lambda 
 
 ---
 ## 📈 Model Performance
-The **13.46% MAPE for Luxury models** is particularly impressive given the high variance in high-end vehicle pricing, where the **MAPE** of the **entry-level** line model was **81.32%.**
+The **13.46% MAPE for Luxury models** is particularly impressive given the high variance in high-end vehicle pricing, where the **MAPE** of the **baseline linear model** was **81.32%.**
 
 | Segment | MAE | MAPE | Key Logic |
 | :--- | :--- | :--- | :--- |
