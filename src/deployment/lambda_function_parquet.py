@@ -4,6 +4,7 @@ import boto3
 from datetime import datetime, timedelta
 import awswrangler as wr
 import pandas as pd
+import requests
 from rapidfuzz import process, fuzz
 
 # Connectiong to DynamoDB
@@ -127,7 +128,7 @@ def lambda_handler(event, context):
         print(f"Cleaning up old data from: {old_prefix}")
         bucket.objects.filter(Prefix=old_prefix).delete()
 
-        print(f"Uploading Parquer to  {S3_DEST_PATH}...")
+        print(f"Uploading Parquet to  {S3_DEST_PATH}...")
         wr.s3.to_parquet(
             df=df,
             path=S3_DEST_PATH,
@@ -136,10 +137,16 @@ def lambda_handler(event, context):
             # Only deletes the paths of partitions that should be updated and then writes the new partitions files
         )
 
-        # 4. Repair Glue Catalog table
+        # 4. Change partition in Athena
+        partition_query = f"""
+        ALTER TABLE vehilce_sales_parquet
+        ADD IF NOT EXISTS PARTITION (year={prev_year}, month={prev_month})
+        LOCATION 's3://{BUCKET_NAME}/refined_data/year={current_year}/month={current_month}/'
+        """
+        
         athena = boto3.client('athena')
         athena.start_query_execution(
-            QueryString="MSCK REPAIR TABLE vehicle_sales_parquet",
+            QueryString=partition_query,
             QueryExecutionContext={'Database': 'vehicle_sales_db'},
             ResultConfiguration={'OutputLocation': f"s3://{BUCKET_NAME}/athena-results/"}
         )
