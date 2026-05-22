@@ -48,17 +48,10 @@ def lambda_handler(event, context):
         s3.upload_file(file_to_upload, BUCKET_NAME, S3_KEY)
 
         return {
-            'statusCode': 200,
-            'body': json.dumps('Pipeline SUCCESS! Data updated in S3.')
+            "statusCode": 200,
+            "raw_key": S3_KEY
         }
 
     except Exception as e:
         print(f"Error: {str(e)}")
-        # Sending manually note to SNS
-        sns = boto3.client('sns')
-        sns.publish(
-            TopicArn=os.environ.get('SNS_TOPIC_ARN'),
-            Message=f"Lambda failed: {str(e)}",
-            Subject="PIPELINE ERROR ALERT"
-        )
         raise e

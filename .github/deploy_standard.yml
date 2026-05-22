@@ -1,0 +1,45 @@
+name: Deploy Standard Lambdas
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/data_pipeline/vin_enricher.py'
+      - 'src/deployment/lambda_function.py'
+      - 'src/deployment/lambda_function_parquet.py'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      # 1. Updating VIN Enricher
+      - name: Package & Deploy VIN Enricher
+        run: |
+          cd src/data_pipeline
+          zip -r vin_enricher.zip vin_enricher.py
+          aws lambda update-function-code --function-name car-price-automation-vin-fill --zip-file fileb://vin_enricher.zip
+
+      # 2. Updating Kaggle Ingest
+      - name: Package & Deploy Kaggle Ingest
+        run: |
+          cd src/deployment
+          zip -r lambda_function.zip lambda_function.py
+          aws lambda update-function-code --function-name car-price-automation-test-kaggle --zip-file fileb://lambda_function.zip
+
+      # 3. Updating Parquet Transformer
+      - name: Package & Deploy Parquet Transformer
+        run: |
+          cd src/deployment
+          zip -r lambda_parquet.zip lambda_function_parquet.py
+          aws lambda update-function-code --function-name car-price-automation-test-kaggle-parquet --zip-file fileb://lambda_parquet.zip

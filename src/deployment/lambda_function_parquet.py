@@ -1,9 +1,10 @@
 import os
 import json
+import io
 import boto3
 from datetime import datetime, timedelta
-import awswrangler as wr
 import pandas as pd
+import pyarrow as pa
 import requests
 from rapidfuzz import process, fuzz
 
@@ -80,20 +81,15 @@ def lambda_handler(event, context):
 
     # PARAMETERS
     BUCKET_NAME = os.environ.get('BUCKET_NAME')
-    current_date = datetime.now().strftime('%Y-%m-%d')
-
-    # Where we read from (file uploaded by the first Lambda)
-    S3_SOURCE_PATH = f's3://{BUCKET_NAME}/raw_data/{current_date}/car_prices.csv'
-
-    # Where do we store Parquet
-    S3_DEST_PATH = f's3://{BUCKET_NAME}/refined_data/year={datetime.now().year}/month={datetime.now().month}/'
+    today = datetime.now()
+    PARTITION_PREFIX = f'refined_data/year={today.year}/month={today.month}/'
+    S3_KEY = f'{PARTITION_PREFIX}data_incremental.parquet'
 
     try:
         # 1. Load directly from S3 to Pandas
-        print(f"Reading CSV from S3: {S3_SOURCE_PATH}")
-
-        # Wrangler taking care of communication with S3
-        df = wr.s3.read_csv(path=S3_SOURCE_PATH)
+        s3 = boto3.client('s3')
+        response = s3.get_object(Bucket=BUCKET_NAME, Key=event.get('raw_key'))
+        df = pd.read_csv(io.BytesIO(response['Body'].read()))
 
         # 2. Cleaning data
         df = df.rename(columns={'year': 'release_year', 'trim': 'car_trim'})
@@ -112,7 +108,6 @@ def lambda_handler(event, context):
 
         # 3. Delete old month and upload new as Parquet
         # Calculate the previous month
-        today = datetime.now()
         first_day_of_current_month = today.replace(day=1)
         last_month_date = first_day_of_current_month - timedelta(days=1)
 
@@ -128,41 +123,22 @@ def lambda_handler(event, context):
         print(f"Cleaning up old data from: {old_prefix}")
         bucket.objects.filter(Prefix=old_prefix).delete()
 
-        print(f"Uploading Parquet to  {S3_DEST_PATH}...")
-        wr.s3.to_parquet(
-            df=df,
-            path=S3_DEST_PATH,
-            dataset=True,
-            mode="overwrite_partitions"
-            # Only deletes the paths of partitions that should be updated and then writes the new partitions files
-        )
+        # Upload parquet to S3
+        parquet_buffer = io.BytesIO()
+        df.to_parquet(parquet_buffer, index=False)
 
-        # 4. Change partition in Athena
-        partition_query = f"""
-        ALTER TABLE vehilce_sales_parquet
-        ADD IF NOT EXISTS PARTITION (year={prev_year}, month={prev_month})
-        LOCATION 's3://{BUCKET_NAME}/refined_data/year={current_year}/month={current_month}/'
-        """
-        
-        athena = boto3.client('athena')
-        athena.start_query_execution(
-            QueryString=partition_query,
-            QueryExecutionContext={'Database': 'vehicle_sales_db'},
-            ResultConfiguration={'OutputLocation': f"s3://{BUCKET_NAME}/athena-results/"}
+        s3.put_object(
+            Bucket=BUCKET_NAME,
+            Key=S3_KEY,
+            Body=parquet_buffer.getvalue()
         )
 
         return {
-            'statusCode': 200,
-            'body': json.dumps(f'Success! Parquet created in {S3_DEST_PATH}')
+            "statusCode": 200,
+            "year": today.year,
+            "month": today.month,
+            "partition_location": f"s3://{BUCKET_NAME}/{PARTITION_PREFIX}"
         }
 
     except Exception as e:
-        print(f"Error: {str(e)}")
-        # Sending manually note to SNS
-        sns = boto3.client('sns')
-        sns.publish(
-            TopicArn=os.environ.get('SNS_TOPIC_ARN'),
-            Message=f"Lambda failed: {str(e)}",
-            Subject="PIPELINE ERROR ALERT"
-        )
         raise e  # Important: throwing error to be catched by SNS
