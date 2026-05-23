@@ -40,12 +40,21 @@ def lambda_handler(event, context):
         else:
             price = model_norm.predict(df_clean[features])[0]
             
+        # 5. Safe Response formatting for API Gateway Proxy
         return {
             "statusCode": 200,
-            "body": {"predicted_price": round(float(price), 2)}
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            },
+            "body": json.dumps({"predicted_price": round(float(price), 2)})
         }
     except Exception as e:
         return {
             "statusCode": 500,
-            "body": {"error": str(e)}
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            },
+            "body": json.dumps({"error": str(e)})
         }
