@@ -13,21 +13,22 @@ from category_encoders import TargetEncoder
 LUXURY_BRANDS = ['Rolls-Royce','Ferrari','Lamborghini','Airstream','Tesla','Bentley','Aston Martin','Maserati', 'Porsche', 'Land Rover']
 FEATURES = ['make', 'car_age', 'condition', 'odometer', 'year_condition','model_clean', 'body_clean', 'state', 'is_luxury']
 
-def preprocess_data(df):
+def preprocess_data(df, is_training=False):
     df = df.copy()
     df['car_age'] = 2026 - df['year']
     df['year_condition'] = df['year'] * df['condition']
 
     # Cleaning categories
     df['state'] = df['state'].astype(str)
-    df = df[df['state'].str.len() <= 2]
+
+    # Strict rows filtering applied only during training phase
+    if is_training:
+        df = df[df['state'].str.len() <= 2]
+        df = df[(~df['sellingprice'].isna()) & (df['sellingprice'] > 1)]
+        df = df[df['make'] != 'Unknown']  
 
     df['body_clean'] = df['body'].astype(str).str.title().str.strip()
     df['model_clean'] = df['model'].astype(str).str.title().str.strip()
-
-    # Filtering records (for training purpose only - in production everything will be priced)
-    # df = df[(~df['sellingprice'].isna()) & (df['sellingprice'] > 1)]
-    df = df[df['make'] != 'Unknown']
     df['is_luxury'] = df['make'].isin(LUXURY_BRANDS).astype(int)
 
     return df
@@ -37,7 +38,7 @@ if __name__ == "__main__":
     # 1. Loading data
     base_path = Path(__file__).resolve().parent.parent.parent
     df_raw = pd.read_csv(base_path / "data" / "car_prices.csv")
-    df = preprocess_data(df_raw)
+    df = preprocess_data(df_raw, is_training=True)
 
     # 2. Definition of the base Pipeline
     base_pipeline = Pipeline(steps=[
