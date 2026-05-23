@@ -8,6 +8,7 @@ on:
       - 'src/data_pipeline/vin_enricher.py'
       - 'src/deployment/lambda_function.py'
       - 'src/deployment/lambda_function_parquet.py'
+  workflow_dispatch:
 
 jobs:
   deploy:

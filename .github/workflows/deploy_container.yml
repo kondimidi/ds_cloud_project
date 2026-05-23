@@ -8,6 +8,7 @@ on:
       - 'src/deployment/predict_price.py'
       - 'src/model_engineering/train_models.py'
       - 'src/deployment/Dockerfile'
+  workflow_dispatch:
 
 jobs:
   deploy-image:
