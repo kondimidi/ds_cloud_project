@@ -38,6 +38,8 @@ if __name__ == "__main__":
     # 1. Loading data
     base_path = Path(__file__).resolve().parent.parent.parent
     df_raw = pd.read_csv(base_path / "data" / "car_prices.csv")
+
+    # Set is_training=True to drop bad records for training
     df = preprocess_data(df_raw, is_training=True)
 
     # 2. Definition of the base Pipeline

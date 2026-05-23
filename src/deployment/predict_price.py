@@ -1,3 +1,4 @@
+import json
 import joblib
 import pandas as pd
 from pathlib import Path
@@ -10,13 +11,24 @@ model_norm = joblib.load(BASE_PATH / "models" / "model_normal.joblib")
 
 def lambda_handler(event, context):
     try:
-        # 1. The lambda function receives data in an 'event'
-        # Receive JSON: {"car_data": {"make": "Ford", "year": 2014, ...}}
-        car_info = event['car_data']
+        # 1. Handle API Gateway proxy integration wrapper vs direct AWS console test
+        if 'body' in event:
+            body_data = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
+            car_info = body_data['car_data']
+        else:
+            car_info = event['car_data']
+
         df_raw = pd.DataFrame([car_info])
         
         # 2. Data clean
-        df_clean = preprocess_data(df_raw)
+        df_clean = preprocess_data(df_raw, is_training=False)
+
+        # Defensive check against empty dataframes
+        if df_clean.empty:
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"error": "Data preprocessing failed. Input row was dropped."})
+            }
         
         # 3. Features
         features = ['make', 'car_age', 'condition', 'odometer', 'year_condition',
