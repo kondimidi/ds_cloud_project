@@ -26,7 +26,7 @@ def preprocess_data(df):
     df['model_clean'] = df['model'].astype(str).str.title().str.strip()
 
     # Filtering records (for training purpose only - in production everything will be priced)
-    df = df[(~df['sellingprice'].isna()) & (df['sellingprice'] > 1)]
+    # df = df[(~df['sellingprice'].isna()) & (df['sellingprice'] > 1)]
     df = df[df['make'] != 'Unknown']
     df['is_luxury'] = df['make'].isin(LUXURY_BRANDS).astype(int)
 
