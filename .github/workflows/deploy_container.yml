@@ -42,7 +42,6 @@ jobs:
           ECR_REPOSITORY: car-valuation-lambda
           IMAGE_TAG: latest
         run: |
-          # Budujemy obraz wskazując na kontekst folderu deployment (gdzie jest Dockerfile)
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f src/deployment/Dockerfile .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
