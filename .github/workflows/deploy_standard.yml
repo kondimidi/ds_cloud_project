@@ -9,6 +9,7 @@ on:
       - main
     paths:
       - 'src/data_pipeline/vin_enricher.py'
+      - 'src/data_pipeline/brand_monitor.py'
       - 'src/deployment/lambda_function.py'
       - 'src/deployment/lambda_function_parquet.py'
   workflow_dispatch:
@@ -47,3 +48,10 @@ jobs:
           cd src/deployment
           zip -r lambda_parquet.zip lambda_function_parquet.py
           aws lambda update-function-code --function-name car-price-automation-test-kaggle-parquet --zip-file fileb://lambda_parquet.zip
+
+      # 4. Updating Checking New Brands
+      - name: Package & Deploy Brand Monitor
+        run: |
+          cd src/data_pipeline
+          zip -r brand_monitor.zip brand_monitor.py
+          aws lambda update-function-code --function-name car-price-brand-monitor --zip-file fileb://brand_monitor.zip
