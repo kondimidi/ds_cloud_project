@@ -65,7 +65,7 @@ def lambda_handler(event, context):
     # 6. Action if drift detected
     if new_brands:
         message = f"""
-        🚨 DATA DRIFT ALERT - NEW BRANDS DETECTED 🚨
+        DATA DRIFT ALERT - NEW BRANDS DETECTED!
         
         The pipeline for {year}-{month:02d} found new vehicle brands that are NOT in your canonical dictionary!
         
