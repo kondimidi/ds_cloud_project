@@ -19,8 +19,8 @@ def lambda_handler(event, context):
     sns = boto3.client('sns')
 
     # Get parameters from Step Functions
-    year = event('year')
-    month = event('month')
+    year = event['year']
+    month = event['month']
     bucket = os.environ.get('BUCKET_NAME')
     sns_topic = os.environ.get('SNS_TOPIC_ARN')
     

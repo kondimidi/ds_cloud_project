@@ -66,5 +66,5 @@ if __name__ == "__main__":
     model_normal.fit(df_normal[FEATURES], df_normal['sellingprice'])
 
     # 5. Export for production
-    joblib.dump(model_luxury, base_path / "models" / "model_luxury.joblib")
-    joblib.dump(model_normal, base_path / "models" / "model_normal.joblib")
+    joblib.dump(model_luxury, base_path / "models" / "latest" / "model_luxury.joblib")
+    joblib.dump(model_normal, base_path / "models" / "latest" / "model_normal.joblib")

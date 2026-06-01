@@ -30,7 +30,7 @@ jobs:
       - name: Download trained models from S3
         run: |
           mkdir -p models
-          aws s3 cp s3://konrad-ds-project-data/models/ models/ --recursive
+          aws s3 cp s3://konrad-ds-project-data/models/latest/ models/ --recursive
 
       - name: Login to Amazon ECR
         id: login-ecr
