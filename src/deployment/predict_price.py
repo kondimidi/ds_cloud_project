@@ -32,7 +32,7 @@ def lambda_handler(event, context):
         
         # 3. Features
         features = ['make', 'car_age', 'condition', 'odometer', 'year_condition',
-                    'model_clean', 'body_clean', 'state', 'is_luxury']
+                    'model_clean', 'body_clean', 'state', 'is_luxury', 'inflation_multiplier']
         
         # 4. Pricing logic
         if df_clean['is_luxury'].iloc[0] == 1:
