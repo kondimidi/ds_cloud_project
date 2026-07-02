@@ -34,7 +34,7 @@ def lambda_handler(event, context):
     # 2. Run Athena Query
     response = athena.start_query_execution(
         QueryString=query,
-        QueryExecutionContext={'Database': 'vehicle_sales_db'},
+        QueryExecutionContext={'Database': 'default'},
         ResultConfiguration={'OutputLocation': f"s3://{bucket}/athena-results/"}
     )
     query_execution_id = response['QueryExecutionId']
