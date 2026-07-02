@@ -27,7 +27,7 @@ def lambda_handler(event, context):
     # 1. Query to get distinct brands for current partition
     query = f"""
         SELECT DISTINCT make 
-        FROM vehicle_sales_db.vehicle_sales_parquet 
+        FROM vehicle_sales_parquet 
         WHERE year = {year} AND month = {month};
     """
     
