@@ -36,7 +36,7 @@ def run_query(query):
         region = st.secrets["aws"]["region_name"]
         s3_staging = st.secrets["aws"]["s3_staging_dir"]
     except:
-        aws_id, aws_key, region, s3_staging = None, None, "eu-central-1"
+        aws_id, aws_key, region, = None, None, "eu-central-1"
 
     conn = connect(
     s3_staging_dir=s3_staging,
