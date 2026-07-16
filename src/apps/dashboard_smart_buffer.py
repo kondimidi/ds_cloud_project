@@ -130,7 +130,16 @@ with tab_analytics:
         
         peer_group = pd.concat([cheaper_peers, current_brand, expensive_peers]).sort_values('clean_avg_price')
         
-        st.bar_chart(data=peer_group, x='make', y='clean_avg_price', color=['#ff4b4b' if m == selected_make else '#1f77b4' for m in peer_group['make']])
+        peer_group['Brand Group'] = peer_group['make'].apply(
+            lambda m: f"Current Brand ({selected_make})" if m == selected_make else "Similar Budget Brands"
+        )
+        
+        st.bar_chart(
+            data=peer_group, 
+            x='make', 
+            y='clean_avg_price', 
+            color='Brand Group'
+        )
     else:
         st.info("Insufficient baseline pricing data for peer ranking.")
 
