@@ -82,7 +82,7 @@ with tab_analytics:
     @st.cache_data
     def get_data_for_brand(make):
         query = f"""
-            SELECT production_year, sale_year, sellingprice, odometer, condition, state, color, car_model
+            SELECT car_age, sale_year, sellingprice, odometer, condition, state, color, car_model
             FROM stg_vehicle_sales
             WHERE make = '{make}'
         """
@@ -173,8 +173,8 @@ with tab_analytics:
     st.markdown("Historical overview of asset value relative to its original production year (Unfiltered by sale year range).")
     
     if not df_brand_pool.empty:
-        df_depreciation = df_brand_pool.groupby('production_year')['sellingprice'].mean().reset_index()
-        st.line_chart(data=df_depreciation, x='production_year', y='sellingprice')
+        df_depreciation = df_brand_pool.groupby('car_age')['sellingprice'].mean().reset_index()
+        st.line_chart(data=df_depreciation, x='car_age', y='sellingprice')
 
 
 # ==========================================
@@ -194,7 +194,7 @@ with tab_comparison:
         st.write("##### Condition Share (%)")
         st.bar_chart(df_comp1['condition'].value_counts(normalize=True).sort_index() * 100)
         st.write("##### Price Depreciation Timeline")
-        st.line_chart(data=df_comp1.groupby('production_year')['sellingprice'].mean().reset_index(), x='production_year', y='sellingprice')
+        st.line_chart(data=df_comp1.groupby('car_age')['sellingprice'].mean().reset_index(), x='car_age', y='sellingprice')
 
     with col_b2:
         # Domyślnie ustawiamy drugą markę na inną pozycję
@@ -204,7 +204,7 @@ with tab_comparison:
         st.write("##### Condition Share (%)")
         st.bar_chart(df_comp2['condition'].value_counts(normalize=True).sort_index() * 100)
         st.write("##### Price Depreciation Timeline")
-        st.line_chart(data=df_comp2.groupby('production_year')['sellingprice'].mean().reset_index(), x='production_year', y='sellingprice')
+        st.line_chart(data=df_comp2.groupby('car_age')['sellingprice'].mean().reset_index(), x='car_age', y='sellingprice')
 
 
 # ==========================================
