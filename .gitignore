@@ -1,6 +1,6 @@
 # Folders
 data/
-models/
+/models/
 artifacts/
 *.json
 

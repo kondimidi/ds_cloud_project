@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: athena_source
+    database: awsdatacatalog
+    schema: default
+    tables:
+      - name: vehicle_sales_parquet
