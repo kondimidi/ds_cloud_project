@@ -15,7 +15,7 @@ WITH prepared_data AS (
     FROM {{ source('athena_source', 'vehicle_sales_parquet') }}
 )
 SELECT 
-    vin, make, car_model, body_type, state, condition, odometer, color, saledate, sellingprice, sale_year,
+    vin, make, car_model, body_type, state, condition, odometer, color, saledate, sellingprice, sale_year, release_year,
     GREATEST(sale_year - release_year, 0) AS car_age
 FROM prepared_data
 WHERE sale_year IS NOT NULL

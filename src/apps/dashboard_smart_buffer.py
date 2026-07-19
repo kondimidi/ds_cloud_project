@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 from pyathena import connect
+import altair as alt
 
 st.set_page_config(page_title="Vehicle Market Storyteller", layout="wide")
 
@@ -28,6 +29,9 @@ state_usa = ['al','ak','az','ar','ct','sd','nd','de','fl','ga','hi','id','il','i
              'ia','ca','ks','sc','nc','ky','co','la','me','md','ma','mi','mn','ms',
              'mo','mt','ne','nv','nh','nj','ny','nm','oh','ok','or','pa','ri','tx',
              'tn','ut','vt','wa','va','wv','wi','wy']
+
+condition_bins = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 55]
+condition_labels = ['1-5', '6-10', '11-15', '16-20', '21-25', '26-30', '31-35', '36-40', '41-45', '46-50']
 
 def run_query(query):
     try:
@@ -82,7 +86,7 @@ with tab_analytics:
     @st.cache_data
     def get_data_for_brand(make):
         query = f"""
-            SELECT car_age, sale_year, sellingprice, odometer, condition, state, color, car_model
+            SELECT car_age, sale_year, release_year, sellingprice, odometer, condition, state, color, car_model
             FROM stg_vehicle_sales
             WHERE make = '{make}'
         """
@@ -90,8 +94,8 @@ with tab_analytics:
 
     df_brand_pool = get_data_for_brand(selected_make)
 
-    min_year = int(df_brand_pool['sale_year'].min())
-    max_year = int(df_brand_pool['sale_year'].max())    
+    min_year = int(df_brand_pool['release_year'].min())
+    max_year = int(df_brand_pool['release_year'].max())    
 
     if min_year < max_year:
         selected_year_range = st.sidebar.slider(
@@ -105,8 +109,8 @@ with tab_analytics:
         st.sidebar.info(f"Data available only for year: {min_year}")
 
     df_final = df_brand_pool[
-        (df_brand_pool['sale_year'] >= selected_year_range[0]) & 
-        (df_brand_pool['sale_year'] <= selected_year_range[1])
+        (df_brand_pool['release_year'] >= selected_year_range[0]) & 
+        (df_brand_pool['release_year'] <= selected_year_range[1])
     ]
 
     # General size metric
@@ -134,12 +138,19 @@ with tab_analytics:
             lambda m: f"Current Brand ({selected_make})" if m == selected_make else "Similar Budget Brands"
         )
         
-        st.bar_chart(
-            data=peer_group, 
-            x='make', 
-            y='clean_avg_price', 
-            color='Brand Group'
+        # Budowa zaawansowanego wykresu w Altair
+        base_chart = alt.Chart(peer_group).encode(
+            x=alt.X('make:N', sort='y', title='Brand'),
+            y=alt.Y('clean_avg_price:Q', axis=None, title=None), # Całkowite ukrycie osi Y i jej nazwy
+            color=alt.Color('Brand Group:N', scale=alt.Scale(domain=[f"Current Brand ({selected_make})", "Similar Budget Brands"], range=['#ff4b4b', '#1f77b4']))
         )
+        
+        bars = base_chart.mark_bar()
+        text_labels = base_chart.mark_text(align='center', baseline='bottom', dy=-5).encode(
+            text=alt.Text('clean_avg_price:Q', format='$,.0f') # Dodanie etykiet tekstowych nad kolumnami
+        )
+        
+        st.altair_chart(bars + text_labels, use_container_width=True)
     else:
         st.info("Insufficient baseline pricing data for peer ranking.")
 
@@ -147,43 +158,54 @@ with tab_analytics:
 
     # Percentage share
     st.subheader("📊 Market Share & Structure Distributions")
-    st.markdown("Proportional insights into car structural properties (Condition, Location, and Colors).")
     
     col_cond, col_state, col_color = st.columns(3)
     
     with col_cond:
         st.write("#### Technical Condition Share (%)")
         if not df_final.empty:
-            cond_share = df_final['condition'].value_counts(normalize=True).sort_index() * 100
-            st.bar_chart(cond_share)
+            df_final['condition_bin'] = pd.cut(df_final['condition'], bins=condition_bins, labels=condition_labels)
+            cond_share = df_final['condition_bin'].value_counts(normalize=True).reset_index()
+            cond_share.columns = ['Condition Range', 'Share (%)']
+            cond_share['Share (%)'] *= 100
+            
+            chart_cond_single = alt.Chart(cond_share).mark_bar().encode(
+                x=alt.X('Condition Range:N', sort=condition_labels),
+                y=alt.Y('Share (%):Q')
+            )
+            st.altair_chart(chart_cond_single, use_container_width=True)
         else:
             st.write("No data")
             
     with col_state:
         st.write("#### Availability by USA State (%)")
         if not df_final.empty:
-            state_share = df_final['state'].value_counts(normalize=True).head(10) * 100
-            st.bar_chart(state_share)
+            state_share = df_final['state'].value_counts(normalize=True).head(10).reset_index()
+            state_share.columns = ['State', 'Share (%)']
+            state_share['Share (%)'] *= 100
+            st.altair_chart(alt.Chart(state_share).mark_bar().encode(x='State:N', y='Share (%):Q'), use_container_width=True)
         else:
             st.write("No data")
             
     with col_color:
         st.write("#### Color Popularity Share (%)")
         if not df_final.empty:
-            color_share = df_final['color'].value_counts(normalize=True).head(10) * 100
-            st.bar_chart(color_share)
+            color_share = df_final['color'].value_counts(normalize=True).head(10).reset_index()
+            color_share.columns = ['Color', 'Share (%)']
+            color_share['Share (%)'] *= 100
+            st.altair_chart(alt.Chart(color_share).mark_bar().encode(x='Color:N', y='Share (%):Q'), use_container_width=True)
         else:
             st.write("No data")
 
     st.markdown("---")
 
-    # Full depreciation history (Independent of the sales year filter)
-    st.subheader("📉 Price Depreciation Profile over Manufacture Years")
-    st.markdown("Historical overview of asset value relative to its original production year (Unfiltered by sale year range).")
+    # Full depreciation history (Independent of the sales year filter)  
+    st.subheader("Price Depreciation Profile over Manufacture Years")
+    st.markdown("Historical overview of asset value relative to its original production year (Unfiltered by slider range).")
     
     if not df_brand_pool.empty:
-        df_depreciation = df_brand_pool.groupby('car_age')['sellingprice'].mean().reset_index()
-        st.line_chart(data=df_depreciation, x='car_age', y='sellingprice')
+        df_depreciation = df_brand_pool.groupby('release_year')['sellingprice'].mean().reset_index()
+        st.line_chart(data=df_depreciation, x='release_year', y='sellingprice')
 
 
 # ==========================================
@@ -191,30 +213,108 @@ with tab_analytics:
 # ==========================================
 with tab_comparison:
     st.title("⚔️ Brand Side-by-Side Comparison")
-    st.write("Compare structural properties and value between two selected makers.")
+    st.write("Compare structural properties, colors, body styles and value between two selected makers on integrated multi-layered charts.")
     st.markdown("---")
     
-    col_b1, col_b2 = st.columns(2)
-    
-    with col_b1:
+    col_sel1, col_sel2 = st.columns(2)
+    with col_sel1:
         comp_make_1 = st.selectbox("Select Brand A", all_makes, index=all_makes.index(selected_make) if selected_make in all_makes else 0)
-        df_comp1 = get_data_for_brand(comp_make_1)
-        st.metric(f"{comp_make_1} Total Volume", f"{len(df_comp1):,}")
-        st.write("##### Condition Share (%)")
-        st.bar_chart(df_comp1['condition'].value_counts(normalize=True).sort_index() * 100)
-        st.write("##### Price Depreciation Timeline")
-        st.line_chart(data=df_comp1.groupby('car_age')['sellingprice'].mean().reset_index(), x='car_age', y='sellingprice')
-
-    with col_b2:
-        # Domyślnie ustawiamy drugą markę na inną pozycję
+        df_comp1 = get_data_for_brand(comp_make_1).copy()
+    with col_sel2:
         comp_make_2 = st.selectbox("Select Brand B", all_makes, index=min(1, len(all_makes)-1))
-        df_comp2 = get_data_for_brand(comp_make_2)
-        st.metric(f"{comp_make_2} Total Volume", f"{len(df_comp2):,}")
-        st.write("##### Condition Share (%)")
-        st.bar_chart(df_comp2['condition'].value_counts(normalize=True).sort_index() * 100)
-        st.write("##### Price Depreciation Timeline")
-        st.line_chart(data=df_comp2.groupby('car_age')['sellingprice'].mean().reset_index(), x='car_age', y='sellingprice')
+        df_comp2 = get_data_for_brand(comp_make_2).copy()
 
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        st.metric(f"{comp_make_1} Total Volume", f"{len(df_comp1):,}")
+        st.metric(f"{comp_make_1} Average Price", f"${df_comp1['sellingprice'].mean():,.2f}")
+    with col_m2:
+        st.metric(f"{comp_make_2} Total Volume", f"{len(df_comp2):,}")
+        st.metric(f"{comp_make_2} Average Price", f"${df_comp2['sellingprice'].mean():,.2f}")
+
+    st.markdown("---")
+    
+    st.write("### Integrated Condition Share Comparison (%)")
+    df_comp1['condition_bin'] = pd.cut(df_comp1['condition'], bins=condition_bins, labels=condition_labels)
+    df_comp2['condition_bin'] = pd.cut(df_comp2['condition'], bins=condition_bins, labels=condition_labels)
+    
+    c1 = df_comp1['condition_bin'].value_counts(normalize=True).reset_index()
+    c1.columns = ['Condition Range', 'Share (%)']
+    c1['Share (%)'] *= 100
+    c1['Brand'] = comp_make_1
+    
+    c2 = df_comp2['condition_bin'].value_counts(normalize=True).reset_index()
+    c2.columns = ['Condition Range', 'Share (%)']
+    c2['Share (%)'] *= 100
+    c2['Brand'] = comp_make_2
+    
+    df_cond_comp = pd.concat([c1, c2])
+    
+    chart_cond = alt.Chart(df_cond_comp).mark_bar(opacity=0.6).encode(
+        x=alt.X('Condition Range:N', sort=condition_labels, title='Condition Range'),
+        y=alt.Y('Share (%):Q', title='Share (%)', stack=None),
+        color=alt.Color('Brand:N', scale=alt.Scale(range=['#1f77b4', '#ff7f0e']))
+    )
+    st.altair_chart(chart_cond, use_container_width=True)
+
+    st.write("### Price Depreciation Timeline Comparison")
+    dep1 = df_comp1.groupby('release_year')['sellingprice'].mean().reset_index()
+    dep1['Brand'] = comp_make_1
+    dep2 = df_comp2.groupby('release_year')['sellingprice'].mean().reset_index()
+    dep2['Brand'] = comp_make_2
+    df_dep_comp = pd.concat([dep1, dep2])
+    
+    chart_dep = alt.Chart(df_dep_comp).mark_line(strokeWidth=3, opacity=0.8).encode(
+        x=alt.X('release_year:Q', title='Manufacture Year', axis=alt.Axis(format='d')),
+        y=alt.Y('sellingprice:Q', title='Average Price ($)'),
+        color=alt.Color('Brand:N', scale=alt.Scale(range=['#1f77b4', '#ff7f0e']))
+    )
+    st.altair_chart(chart_dep, use_container_width=True)
+
+    st.markdown("---")
+    col_chart_left, col_chart_right = st.columns(2)
+    
+    with col_chart_left:
+        st.write("### Top 10 Color Popularity Comparison (%)")
+        col1 = df_comp1['color'].value_counts(normalize=True).head(10).reset_index()
+        col1.columns = ['Color', 'Share (%)']
+        col1['Share (%)'] *= 100
+        col1['Brand'] = comp_make_1
+        
+        col2 = df_comp2['color'].value_counts(normalize=True).head(10).reset_index()
+        col2.columns = ['Color', 'Share (%)']
+        col2['Share (%)'] *= 100
+        col2['Brand'] = comp_make_2
+        
+        df_color_comp = pd.concat([col1, col2])
+        
+        chart_color = alt.Chart(df_color_comp).mark_bar(opacity=0.6).encode(
+            x=alt.X('Color:N', title='Color', sort='-y'),
+            y=alt.Y('Share (%):Q', title='Share (%)', stack=None),
+            color=alt.Color('Brand:N', scale=alt.Scale(range=['#1f77b4', '#ff7f0e']))
+        )
+        st.altair_chart(chart_color, use_container_width=True)
+
+    with col_chart_right:
+        st.write("### Top 10 Body Style Comparison (%)")
+        b1 = df_comp1['body_type'].value_counts(normalize=True).head(10).reset_index()
+        b1.columns = ['Body Type', 'Share (%)']
+        b1['Share (%)'] *= 100
+        b1['Brand'] = comp_make_1
+        
+        b2 = df_comp2['body_type'].value_counts(normalize=True).head(10).reset_index()
+        b2.columns = ['Body Type', 'Share (%)']
+        b2['Share (%)'] *= 100
+        b2['Brand'] = comp_make_2
+        
+        df_body_comp = pd.concat([b1, b2])
+        
+        chart_body = alt.Chart(df_body_comp).mark_bar(opacity=0.6).encode(
+            x=alt.X('Body Type:N', title='Body Type', sort='-y'),
+            y=alt.Y('Share (%):Q', title='Share (%)', stack=None),
+            color=alt.Color('Brand:N', scale=alt.Scale(range=['#1f77b4', '#ff7f0e']))
+        )
+        st.altair_chart(chart_body, use_container_width=True)
 
 # ==========================================
 # TAB 3: VEHICLE VALUATION CALCULATOR
