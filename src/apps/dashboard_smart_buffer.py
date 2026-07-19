@@ -118,15 +118,8 @@ with tab_analytics:
 
     st.markdown("---")
 
-    col_met1, col_met2 = st.columns(2)
     total_offers = len(df_final)
-    avg_price_selected = df_final['sellingprice'].mean() if total_offers > 0 else 0
-    
-    with col_met1:
-        st.metric("Total Available Offers in Selection", f"{total_offers:,}")
-    with col_met2:
-        st.metric("Dynamic Average Price ($)", f"${avg_price_selected:,.2f}")
-        
+    st.metric("Total Available Offers in Selection", f"{total_offers:,}")
     st.markdown("---")
 
     st.subheader("🎯 Market Price Positioning (Dynamic Range & Trimmed Outliers)")
