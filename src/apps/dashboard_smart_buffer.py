@@ -65,12 +65,21 @@ all_makes = get_makes()
 @st.cache_data
 def get_brand_peer_data():
     query = """
-        SELECT make, clean_avg_price
+        SELECT make, release_year, clean_avg_price
         FROM mart_brand_peer_comparison
         """
     return run_query(query)
 
 df_brand_peers = get_brand_peer_data()
+
+@st.cache_data
+def get_data_for_brand(make):
+    query = f"""
+        SELECT car_age, sale_year, release_year, sellingprice, odometer, condition, state, color, car_model, body_type
+        FROM stg_vehicle_sales
+        WHERE make = '{make}'
+    """
+    return run_query(query)
 
 
 # ==========================================
@@ -81,84 +90,90 @@ with tab_analytics:
     st.caption("Understand market trends, distributions, and positioning without the data noise.")
     st.markdown("---")
 
-    selected_make = st.sidebar.selectbox("Select primary brand", all_makes, key="primary_brand")
+    st.subheader("🛠️ Configuration Filter")
+    col_f1, col_f2 = st.columns([1, 2])
+    
+    with col_f1:
+        selected_make = st.selectbox("Select primary brand", all_makes, key="primary_brand")
+        df_brand_pool = get_data_for_brand(selected_make).copy()
 
-    @st.cache_data
-    def get_data_for_brand(make):
-        query = f"""
-            SELECT car_age, sale_year, release_year, sellingprice, odometer, condition, state, color, car_model, body_type
-            FROM stg_vehicle_sales
-            WHERE make = '{make}'
-        """
-        return run_query(query)
-
-    df_brand_pool = get_data_for_brand(selected_make)
-
-    min_year = int(df_brand_pool['release_year'].min())
-    max_year = int(df_brand_pool['release_year'].max())    
-
-    if min_year < max_year:
-        selected_year_range = st.sidebar.slider(
-            "Select Range of Sale Years",
-            min_value=min_year,
-            max_value=max_year,
-            value=(min_year, max_year)
-        )
-    else:
-        selected_year_range = (min_year, max_year)
-        st.sidebar.info(f"Data available only for year: {min_year}")
+    with col_f2:
+        min_year = int(df_brand_pool['release_year'].min())
+        max_year = int(df_brand_pool['release_year'].max())    
+        if min_year < max_year:
+            selected_year_range = st.slider(
+                "Select Range of Manufacture Years",
+                min_value=min_year,
+                max_value=max_year,
+                value=(min_year, max_year)
+            )
+        else:
+            selected_year_range = (min_year, max_year)
+            st.info(f"Data available only for year: {min_year}")
 
     df_final = df_brand_pool[
         (df_brand_pool['release_year'] >= selected_year_range[0]) & 
         (df_brand_pool['release_year'] <= selected_year_range[1])
-    ]
+    ].copy()
 
-    # General size metric
+    st.markdown("---")
+
+    col_met1, col_met2 = st.columns(2)
     total_offers = len(df_final)
-    st.metric("Total Available Offers in Selection", f"{total_offers:,}")
-    st.markdown("---")
-
-    # 10 neighbours
-    st.subheader("🎯 Market Price Positioning (Trimmed Outliers)")
-    st.markdown("How this brand ranks among 10 other brands with the closest average market value.")
+    avg_price_selected = df_final['sellingprice'].mean() if total_offers > 0 else 0
     
-    if selected_make in df_brand_peers['make'].values:
-        target_price = df_brand_peers[df_brand_peers['make'] == selected_make]['clean_avg_price'].values[0]
+    with col_met1:
+        st.metric("Total Available Offers in Selection", f"{total_offers:,}")
+    with col_met2:
+        st.metric("Dynamic Average Price ($)", f"${avg_price_selected:,.2f}")
         
-        df_peers_calc = df_brand_peers.copy()
-        df_peers_calc['price_diff'] = df_peers_calc['clean_avg_price'] - target_price
+    st.markdown("---")
+
+    st.subheader("🎯 Market Price Positioning (Dynamic Range & Trimmed Outliers)")
+    st.markdown("How this brand ranks among 10 other brands with the closest average market value calculated **exactly for the selected range of years**.")
+    
+    if not df_brand_peers.empty:
+        df_peers_filtered = df_brand_peers[
+            (df_brand_peers['release_year'] >= selected_year_range[0]) & 
+            (df_brand_peers['release_year'] <= selected_year_range[1])
+        ]
         
-        cheaper_peers = df_peers_calc[df_peers_calc['price_diff'] < 0].sort_values('price_diff', ascending=False).head(5)
-        expensive_peers = df_peers_calc[df_peers_calc['price_diff'] > 0].sort_values('price_diff', ascending=True).head(5)
-        current_brand = df_peers_calc[df_peers_calc['make'] == selected_make]
+        df_peers_dynamic = df_peers_filtered.groupby('make')['clean_avg_price'].mean().reset_index()
         
-        peer_group = pd.concat([cheaper_peers, current_brand, expensive_peers]).sort_values('clean_avg_price')
-        
-        peer_group['Brand Group'] = peer_group['make'].apply(
-            lambda m: f"Current Brand ({selected_make})" if m == selected_make else "Similar Budget Brands"
-        )
-        
-        # Budowa zaawansowanego wykresu w Altair
-        base_chart = alt.Chart(peer_group).encode(
-            x=alt.X('make:N', sort='y', title='Brand'),
-            y=alt.Y('clean_avg_price:Q', axis=None, title=None), # Całkowite ukrycie osi Y i jej nazwy
-            color=alt.Color('Brand Group:N', scale=alt.Scale(domain=[f"Current Brand ({selected_make})", "Similar Budget Brands"], range=['#ff4b4b', '#1f77b4']))
-        )
-        
-        bars = base_chart.mark_bar()
-        text_labels = base_chart.mark_text(align='center', baseline='bottom', dy=-5).encode(
-            text=alt.Text('clean_avg_price:Q', format='$,.0f') # Dodanie etykiet tekstowych nad kolumnami
-        )
-        
-        st.altair_chart(bars + text_labels, width='stretch')
-    else:
-        st.info("Insufficient baseline pricing data for peer ranking.")
+        if selected_make in df_peers_dynamic['make'].values:
+            target_price = df_peers_dynamic[df_peers_dynamic['make'] == selected_make]['clean_avg_price'].values[0]
+            
+            df_peers_calc = df_peers_dynamic.copy()
+            df_peers_calc['price_diff'] = df_peers_calc['clean_avg_price'] - target_price
+            
+            cheaper_peers = df_peers_calc[df_peers_calc['price_diff'] < 0].sort_values('price_diff', ascending=False).head(5)
+            expensive_peers = df_peers_calc[df_peers_calc['price_diff'] > 0].sort_values('price_diff', ascending=True).head(5)
+            current_brand = df_peers_calc[df_peers_calc['make'] == selected_make]
+            
+            peer_group = pd.concat([cheaper_peers, current_brand, expensive_peers]).sort_values('clean_avg_price')
+            
+            peer_group['Brand Group'] = peer_group['make'].apply(
+                lambda m: f"Current Brand ({selected_make})" if m == selected_make else "Similar Budget Brands"
+            )
+            
+            base_chart = alt.Chart(peer_group).encode(
+                x=alt.X('make:N', sort='y', title='Brand'),
+                y=alt.Y('clean_avg_price:Q', axis=None, title=None),
+                color=alt.Color('Brand Group:N', scale=alt.Scale(domain=[f"Current Brand ({selected_make})", "Similar Budget Brands"], range=['#ff4b4b', '#1f77b4']))
+            )
+            
+            bars = base_chart.mark_bar()
+            text_labels = base_chart.mark_text(align='center', baseline='bottom', dy=-5).encode(
+                text=alt.Text('clean_avg_price:Q', format='$,.0f')
+            )
+            
+            st.altair_chart(bars + text_labels, width='stretch')
+        else:
+            st.info("No pricing data available for the selected range of years to generate rankings.")
 
     st.markdown("---")
 
-    # Percentage share
     st.subheader("📊 Market Share & Structure Distributions")
-    
     col_cond, col_state, col_color = st.columns(3)
     
     with col_cond:
@@ -199,14 +214,32 @@ with tab_analytics:
 
     st.markdown("---")
 
-    # Full depreciation history (Independent of the sales year filter)  
-    st.subheader("Price Depreciation Profile over Manufacture Years")
-    st.markdown("Historical overview of asset value relative to its original production year (Unfiltered by slider range).")
+    st.subheader("📉 Price Depreciation & Supply Volume Profile")
+    st.markdown("Historical overview of average asset value matched with absolute market volume per manufacture year.")
     
     if not df_brand_pool.empty:
-        df_depreciation = df_brand_pool.groupby('release_year')['sellingprice'].mean().reset_index()
-        st.line_chart(data=df_depreciation, x='release_year', y='sellingprice')
-
+        df_depreciation = df_brand_pool.groupby('release_year').agg(
+            avg_price=('sellingprice', 'mean'),
+            volume=('sellingprice', 'count')
+        ).reset_index()
+        
+        base_deprec = alt.Chart(df_depreciation).encode(
+            x=alt.X('release_year:Q', title='Manufacture Year', axis=alt.Axis(format='d'))
+        )
+        
+        # Słupki reprezentujące wolumen (nałożone w tle z niską przezroczystością)
+        volume_bars = base_deprec.mark_bar(opacity=0.15, color='#9467bd').encode(
+            y=alt.Y('volume:Q', title='Volume (Number of Offers)')
+        )
+        
+        # Linia ceny średniej
+        price_line = base_deprec.mark_line(strokeWidth=3, color='#1f77b4').encode(
+            y=alt.Y('avg_price:Q', title='Average Price ($)')
+        )
+        
+        # Połączenie wykresów z niezależnymi osiami Y
+        dual_axis_chart = alt.layer(volume_bars, price_line).resolve_scale(y='independent')
+        st.altair_chart(dual_axis_chart, width='stretch')
 
 # ==========================================
 # TAB 2: COMPARE TWO BRANDS
