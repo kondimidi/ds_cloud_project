@@ -86,7 +86,7 @@ with tab_analytics:
     @st.cache_data
     def get_data_for_brand(make):
         query = f"""
-            SELECT car_age, sale_year, release_year, sellingprice, odometer, condition, state, color, car_model
+            SELECT car_age, sale_year, release_year, sellingprice, odometer, condition, state, color, car_model, body_type
             FROM stg_vehicle_sales
             WHERE make = '{make}'
         """
@@ -150,7 +150,7 @@ with tab_analytics:
             text=alt.Text('clean_avg_price:Q', format='$,.0f') # Dodanie etykiet tekstowych nad kolumnami
         )
         
-        st.altair_chart(bars + text_labels, use_container_width=True)
+        st.altair_chart(bars + text_labels, width='stretch')
     else:
         st.info("Insufficient baseline pricing data for peer ranking.")
 
@@ -173,7 +173,7 @@ with tab_analytics:
                 x=alt.X('Condition Range:N', sort=condition_labels),
                 y=alt.Y('Share (%):Q')
             )
-            st.altair_chart(chart_cond_single, use_container_width=True)
+            st.altair_chart(chart_cond_single, width='stretch')
         else:
             st.write("No data")
             
@@ -183,7 +183,7 @@ with tab_analytics:
             state_share = df_final['state'].value_counts(normalize=True).head(10).reset_index()
             state_share.columns = ['State', 'Share (%)']
             state_share['Share (%)'] *= 100
-            st.altair_chart(alt.Chart(state_share).mark_bar().encode(x='State:N', y='Share (%):Q'), use_container_width=True)
+            st.altair_chart(alt.Chart(state_share).mark_bar().encode(x='State:N', y='Share (%):Q'), width='stretch')
         else:
             st.write("No data")
             
@@ -193,7 +193,7 @@ with tab_analytics:
             color_share = df_final['color'].value_counts(normalize=True).head(10).reset_index()
             color_share.columns = ['Color', 'Share (%)']
             color_share['Share (%)'] *= 100
-            st.altair_chart(alt.Chart(color_share).mark_bar().encode(x='Color:N', y='Share (%):Q'), use_container_width=True)
+            st.altair_chart(alt.Chart(color_share).mark_bar().encode(x='Color:N', y='Share (%):Q'), width='stretch')
         else:
             st.write("No data")
 
@@ -255,7 +255,7 @@ with tab_comparison:
         y=alt.Y('Share (%):Q', title='Share (%)', stack=None),
         color=alt.Color('Brand:N', scale=alt.Scale(range=['#1f77b4', '#ff7f0e']))
     )
-    st.altair_chart(chart_cond, use_container_width=True)
+    st.altair_chart(chart_cond, width='stretch')
 
     st.write("### Price Depreciation Timeline Comparison")
     dep1 = df_comp1.groupby('release_year')['sellingprice'].mean().reset_index()
@@ -269,7 +269,7 @@ with tab_comparison:
         y=alt.Y('sellingprice:Q', title='Average Price ($)'),
         color=alt.Color('Brand:N', scale=alt.Scale(range=['#1f77b4', '#ff7f0e']))
     )
-    st.altair_chart(chart_dep, use_container_width=True)
+    st.altair_chart(chart_dep, width='stretch')
 
     st.markdown("---")
     col_chart_left, col_chart_right = st.columns(2)
@@ -293,7 +293,7 @@ with tab_comparison:
             y=alt.Y('Share (%):Q', title='Share (%)', stack=None),
             color=alt.Color('Brand:N', scale=alt.Scale(range=['#1f77b4', '#ff7f0e']))
         )
-        st.altair_chart(chart_color, use_container_width=True)
+        st.altair_chart(chart_color, width='stretch')
 
     with col_chart_right:
         st.write("### Top 10 Body Style Comparison (%)")
@@ -314,7 +314,7 @@ with tab_comparison:
             y=alt.Y('Share (%):Q', title='Share (%)', stack=None),
             color=alt.Color('Brand:N', scale=alt.Scale(range=['#1f77b4', '#ff7f0e']))
         )
-        st.altair_chart(chart_body, use_container_width=True)
+        st.altair_chart(chart_body, width='stretch')
 
 # ==========================================
 # TAB 3: VEHICLE VALUATION CALCULATOR
